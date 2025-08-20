@@ -1,0 +1,2 @@
+# Read_BetterGI_Log.github.io
+讀取BetterGI運行時生成的Log檔進行日志分析的html網頁
