@@ -1,0 +1,1971 @@
+<!-- 20250820新增了看死亡前最近的XY軸 -->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>日志分析工具</title>
+    <style>
+        html,
+        body {
+            background: #f8f9fa;
+            color: #333;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #dropZone {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px dashed #ccc;
+            margin: 10px;
+            transition: background-color 0.3s;
+            overflow: auto;
+        }
+
+        #dropZone.dragover {
+            background-color: #f0f0f0;
+            border-color: #666;
+        }
+
+        #dropZone.empty {
+            font-size: 24px;
+            color: #666;
+        }
+
+        #dropZone.has-content {
+            padding: 20px;
+            align-items: flex-start;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #888;
+            position: sticky;
+            top: 0;
+            /* 固定在页面顶部 */
+            z-index: 1;
+            /* 确保表头在内容上方 */
+        }
+
+        tr:nth-child(odd) {
+            background-color: #eaeaea;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .red {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* 新增折叠相关样式 */
+        .group-header {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+
+        .group-header:hover {
+            background-color: #e9ecef;
+        }
+
+        .arrow {
+            display: inline-block;
+            margin-right: 10px;
+            transition: transform 0.2s;
+        }
+
+        .arrow.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .group-container {
+            margin-left: 20px;
+            border-left: 2px solid #dee2e6;
+            padding-left: 10px;
+        }
+
+        .collapsible {
+            display: block;
+        }
+
+        .collapsible.collapsed {
+            display: none;
+        }
+
+        /* 暗色主题样式 */
+        body.dark-theme {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        body.dark-theme #dropZone {
+            border-color: #666;
+            background-color: #1e1e1e;
+        }
+
+        body.dark-theme table {
+            border-color: #444;
+        }
+
+        body.dark-theme th,
+        body.dark-theme td {
+            border-color: #444;
+            color: #ffffff;
+        }
+
+        body.dark-theme th {
+            background-color: #888;
+        }
+
+        body.dark-theme tr:nth-child(odd) {
+            background-color: #2a2a2a;
+        }
+
+        body.dark-theme tr:nth-child(even) {
+            background-color: #1e1e1e;
+        }
+
+        body.dark-theme .group-header {
+            background-color: #333;
+            color: #ffffff;
+        }
+
+        body.dark-theme .group-header:hover {
+            background-color: #444;
+        }
+
+        body.dark-theme .red {
+            color: #ff6666;
+        }
+
+        /* 修改弹窗样式 */
+        .coord-popup {
+            display: none;
+            position: fixed;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            max-width: 250px;
+            font-size: 14px;
+            cursor: default;
+            user-select: text;
+            /* 允许文本选择 */
+        }
+
+        .coord-popup.visible {
+            display: block;
+        }
+
+        .coord-popup-header {
+            background-color: #eee;
+            padding: 8px 12px;
+            border-bottom: 1px solid #ccc;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .coord-popup-title {
+            font-weight: bold;
+        }
+
+        .coord-popup .close-btn {
+            cursor: pointer;
+            font-size: 18px;
+            color: #999;
+            padding: 0 5px;
+        }
+
+        .coord-popup .close-btn:hover {
+            color: #000;
+        }
+
+        .coord-popup-content {
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .coord-popup .coord-item {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px dashed #ddd;
+            cursor: text;
+            /* 文本选择光标 */
+        }
+
+        .coord-popup .coord-item:last-child {
+            border-bottom: none;
+        }
+
+        /* 暗色主题下的弹窗样式 */
+        body.dark-theme .coord-popup {
+            background-color: #333;
+            border: 1px solid #666;
+            color: #fff;
+        }
+
+        body.dark-theme .coord-popup-header {
+            background-color: #444;
+            border-bottom: 1px solid #555;
+        }
+
+        body.dark-theme .coord-popup .close-btn {
+            color: #ccc;
+        }
+
+        body.dark-theme .coord-popup .close-btn:hover {
+            color: #fff;
+        }
+
+        body.dark-theme .coord-popup .coord-item {
+            border-bottom: 1px dashed #555;
+        }
+
+        /* 单元格固定状态指示器 */
+        .coords-cell.pinned::after {
+            content: "📌";
+            margin-left: 5px;
+            font-size: 12px;
+        }
+
+        /* 修改单元格光标样式 */
+        .coords-cell {
+            position: relative;
+            /* 默认使用箭头光标 */
+            cursor: default;
+        }
+
+        /* 当单元格有数字时使用手指光标 */
+        .coords-cell.has-coords {
+            cursor: pointer;
+        }
+
+        /* 新增提示文本样式 */
+        .dispatch-alert {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .pause-alert {
+            color: rgb(255, 0, 255);
+            font-weight: bold;
+        }
+
+        /* 更亮的黄色 */
+        .abnormal-alert {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* 新增红色任务名称样式 */
+        .task-name-red {
+            color: red;
+            font-weight: bold;
+        }
+
+        .duration-red {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* 新增弹窗样式 */
+        .battle-popup {
+            display: none;
+            position: fixed;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            max-width: 250px;
+            max-height: 400px;
+            font-size: 14px;
+            cursor: default;
+            user-select: text;
+            overflow: auto;
+        }
+
+        .battle-popup.visible {
+            display: block;
+        }
+
+        .battle-popup-header {
+            background-color: #eee;
+            padding: 8px 12px;
+            border-bottom: 1px solid #ccc;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+        }
+
+        .battle-popup-title {
+            font-weight: bold;
+        }
+
+        .battle-popup .close-btn {
+            cursor: pointer;
+            font-size: 18px;
+            color: #999;
+            padding: 0 5px;
+        }
+
+        .battle-popup .close-btn:hover {
+            color: #000;
+        }
+
+        .battle-popup-content {
+            padding: 10px;
+        }
+
+        .battle-popup .battle-item {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px dashed #ddd;
+            font-family: monospace;
+        }
+
+        .battle-popup .battle-item:last-child {
+            border-bottom: none;
+        }
+
+        /* 暗色主题下的弹窗样式 */
+        body.dark-theme .battle-popup {
+            background-color: #333;
+            border: 1px solid #666;
+            color: #fff;
+        }
+
+        body.dark-theme .battle-popup-header {
+            background-color: #444;
+            border-bottom: 1px solid #555;
+        }
+
+        body.dark-theme .battle-popup .close-btn {
+            color: #ccc;
+        }
+
+        body.dark-theme .battle-popup .close-btn:hover {
+            color: #fff;
+        }
+
+        body.dark-theme .battle-popup .battle-item {
+            border-bottom: 1px dashed #555;
+        }
+
+        /* 新增单元格样式 */
+        .has-battle-events {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .has-battle-events.pinned::after {
+            content: "📌";
+            margin-left: 5px;
+            font-size: 12px;
+        }
+
+        /* 无事件时不可点击 */
+        .no-events {
+            cursor: default !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div id="dropZone" class="empty">将日志文件拖放到此处</div>
+    </div>
+
+    <script>
+        window.onload = function () {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const minutes = now.getMinutes(); // 分钟
+            if ((currentHour < 6) || (currentHour === 6 && minutes <= 30)) {
+                document.body.classList.add('dark-theme');
+            }
+        };
+
+        let lastValidTime = null;
+        // 在文件解析前重置时间戳追踪
+        function resetTimeTracker() {
+            lastValidTime = null;
+        }
+        const parsingContext = {
+            activeGroups: new Map(),
+            activeTasks: new Map(),
+            allGroups: []
+        };
+        // 拖放事件处理
+        const dropZone = document.getElementById('dropZone');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', async e => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = '';
+
+            const files = Array.from(e.dataTransfer.files)
+                .filter(f => f.name.startsWith('better-genshin-impact'))
+                .sort((a, b) => parseDateFromFileName(a.name) - parseDateFromFileName(b.name));
+
+            if (files.length === 0) return;
+
+            parsingContext.activeGroups.clear();
+            parsingContext.activeTasks.clear();
+            parsingContext.allGroups = [];
+
+            try {
+                resetTimeTracker();
+                dropZone.innerHTML = '<div class="loading">解析中...</div>';
+
+                for (const file of files) {
+                    const content = await file.text();
+                    parseLog(content, parseDateFromFileName(file.name));
+                }
+
+                const result = finalizeParsing();
+                dropZone.className = 'has-content';
+                dropZone.innerHTML = generateHTML(result);
+                setupCoordPopups();
+                document.querySelectorAll('.group-header').forEach((el, i) => {
+                    el.onclick = () => {
+                        el.classList.toggle('collapsed');
+                        document.getElementById(`group-${i}`).classList.toggle('collapsed');
+                    };
+                });
+            } catch (e) {
+                dropZone.innerHTML = `<div class="error">解析失败：${e.message}</div>`;
+            }
+        });
+
+        // 修改坐标弹窗事件处理函数
+        function setupCoordPopups() {
+            const coordsCells = document.querySelectorAll('.coords-cell');
+            const battleCells = document.querySelectorAll('.has-battle-events');
+            let popupPositions = new WeakMap(); // 存储每个弹窗的位置状态
+            let pinnedPopup = null;
+            let isDragging = false;
+            let dragOffsetX, dragOffsetY;
+            let dragElement = null;
+            const allPopups = []; // 存储所有弹窗元素
+
+            // 定位弹窗函数
+            const positionPopup = (popup, cell) => {
+                // 如果已有位置记录，使用记录的位置
+                if (popupPositions.has(popup)) {
+                    const pos = popupPositions.get(popup);
+                    popup.style.left = pos.x + 'px';
+                    popup.style.top = pos.y + 'px';
+                    return;
+                }
+
+                // 否则定位在单元格中间
+                const cellRect = cell.getBoundingClientRect();
+                const popupRect = popup.getBoundingClientRect();
+
+                // 计算位置 - 单元格中间
+                let left = cellRect.left + (cellRect.width - popupRect.width) / 2;
+                let top = cellRect.top + (cellRect.height - popupRect.height) / 2;
+
+                // 确保不会超出视口
+                if (left < 5) left = 5;
+                if (top < 5) top = 5;
+                if (left + popupRect.width > window.innerWidth) {
+                    left = window.innerWidth - popupRect.width - 5;
+                }
+                if (top + popupRect.height > window.innerHeight) {
+                    top = window.innerHeight - popupRect.height - 5;
+                }
+
+                popup.style.left = left + 'px';
+                popup.style.top = top + 'px';
+
+                // 存储初始位置
+                popupPositions.set(popup, { x: left, y: top });
+            };
+
+            // 处理坐标弹窗单元格
+            coordsCells.forEach(cell => {
+                const popup = cell.querySelector('.coord-popup');
+                if (!popup) return;
+
+                // 只在有坐标数据时才添加点击事件
+                if (cell.classList.contains('has-coords')) {
+                    // 点击单元格固定/取消固定弹窗
+                    cell.addEventListener('click', (e) => {
+                        // 阻止事件冒泡，避免触发弹窗的点击事件
+                        e.stopPropagation();
+
+                        // 忽略标题栏和关闭按钮的点击
+                        if (e.target.closest('.coord-popup-header')) return;
+
+                        if (popup.classList.contains('pinned')) {
+                            // 取消固定
+                            popup.classList.remove('pinned');
+                            cell.classList.remove('pinned');
+                            pinnedPopup = null;
+
+                            // 如果鼠标不在单元格上，隐藏弹窗
+                            if (!cell.matches(':hover')) {
+                                popup.classList.remove('visible');
+                            }
+                        } else {
+                            // 固定弹窗
+                            pinPopup(popup, cell);
+                        }
+                    });
+                }
+
+                // 固定弹窗函数
+                const pinPopup = (popup, cell) => {
+                    popup.classList.add('pinned');
+                    cell.classList.add('pinned');
+                    pinnedPopup = popup;
+
+                    // 确保弹窗可见
+                    popup.classList.add('visible');
+
+                    // 存储当前位置
+                    popupPositions.set(popup, {
+                        x: parseInt(popup.style.left),
+                        y: parseInt(popup.style.top)
+                    });
+                };
+
+                // 鼠标悬停显示弹窗（只在有坐标数据时）
+                if (cell.classList.contains('has-coords')) {
+                    cell.addEventListener('mouseenter', (e) => {
+                        // 如果已有其他弹窗固定，不做处理
+                        if (pinnedPopup && pinnedPopup !== popup) return;
+
+                        positionPopup(popup, cell);
+                        popup.classList.add('visible');
+                    });
+
+                    cell.addEventListener('mouseleave', (e) => {
+                        // 检查鼠标是否移动到弹窗上
+                        if (popup.contains(e.relatedTarget)) return;
+
+                        // 如果弹窗未固定，隐藏它
+                        if (!popup.classList.contains('pinned')) {
+                            popup.classList.remove('visible');
+                        }
+                    });
+                }
+
+                // 弹窗鼠标进入/离开处理
+                popup.addEventListener('mouseenter', () => {
+                    // 防止单元格mouseleave事件触发
+                    popup._hovering = true;
+                });
+
+                popup.addEventListener('mouseleave', () => {
+                    popup._hovering = false;
+
+                    // 如果弹窗未固定且鼠标不在单元格上，隐藏弹窗
+                    if (!popup.classList.contains('pinned') && !cell.matches(':hover')) {
+                        popup.classList.remove('visible');
+                    }
+                });
+
+                // 在创建弹窗后添加到 allPopups
+                if (popup) {
+                    allPopups.push(popup);
+                }
+
+                // 点击关闭按钮
+                const closeBtn = popup.querySelector('.close-btn');
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    popup.classList.remove('visible', 'pinned');
+                    cell.classList.remove('pinned');
+                    pinnedPopup = null;
+
+                    // 清除位置记录
+                    popupPositions.delete(popup);
+                });
+
+                // 标题栏拖拽功能 - 移动时自动固定
+                const header = popup.querySelector('.coord-popup-header');
+                header.addEventListener('mousedown', (e) => {
+                    if (e.target === closeBtn) return;
+
+                    isDragging = true;
+                    dragElement = popup;
+                    const rect = popup.getBoundingClientRect();
+                    dragOffsetX = e.clientX - rect.left;
+                    dragOffsetY = e.clientY - rect.top;
+
+                    // 移动时自动固定弹窗
+                    if (!popup.classList.contains('pinned')) {
+                        pinPopup(popup, cell);
+                    }
+
+                    e.preventDefault();
+                });
+
+                // 阻止内容区域的点击事件冒泡
+                popup.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+            });
+
+            // 处理战斗事件弹窗单元格
+            battleCells.forEach(cell => {
+                const popups = cell.querySelectorAll('.battle-popup');
+                if (!popups || popups.length === 0) return;
+
+                popups.forEach(popup => {
+                    // 点击单元格固定/取消固定弹窗
+                    cell.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (e.target.closest('.battle-popup-header')) return;
+
+                        if (popup.classList.contains('pinned')) {
+                            popup.classList.remove('pinned');
+                            cell.classList.remove('pinned');
+                            pinnedPopup = null;
+                            if (!cell.matches(':hover')) {
+                                popup.classList.remove('visible');
+                            }
+                        } else {
+                            pinPopup(popup, cell);
+                        }
+                    });
+
+                    // 固定弹窗函数
+                    const pinPopup = (popup, cell) => {
+                        popup.classList.add('pinned');
+                        cell.classList.add('pinned');
+                        pinnedPopup = popup;
+                        popup.classList.add('visible');
+                        positionPopup(popup, cell);
+                        popupPositions.set(popup, {
+                            x: parseInt(popup.style.left),
+                            y: parseInt(popup.style.top)
+                        });
+                    };
+
+                    // 鼠标悬停显示弹窗
+                    cell.addEventListener('mouseenter', (e) => {
+                        if (pinnedPopup && pinnedPopup !== popup) return;
+                        positionPopup(popup, cell);
+                        popup.classList.add('visible');
+                    });
+
+                    cell.addEventListener('mouseleave', (e) => {
+                        if (popup.contains(e.relatedTarget)) return;
+                        if (!popup.classList.contains('pinned')) {
+                            popup.classList.remove('visible');
+                        }
+                    });
+
+                    // 弹窗鼠标进入/离开处理
+                    popup.addEventListener('mouseenter', () => {
+                        popup._hovering = true;
+                    });
+
+                    popup.addEventListener('mouseleave', () => {
+                        popup._hovering = false;
+                        if (!popup.classList.contains('pinned') && !cell.matches(':hover')) {
+                            popup.classList.remove('visible');
+                        }
+                    });
+
+
+                    // // 在创建弹窗后添加到 allPopups
+                    // if (popup) {
+                    //     allPopups.push(popup);
+                    // }
+
+                    // 添加到全局弹窗列表
+                    allPopups.push(popup);
+
+                    // 点击关闭按钮
+                    const closeBtn = popup.querySelector('.close-btn');
+                    closeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        popup.classList.remove('visible', 'pinned');
+                        cell.classList.remove('pinned');
+                        pinnedPopup = null;
+                        popupPositions.delete(popup);
+                    });
+
+                    // 标题栏拖拽功能
+                    const header = popup.querySelector('.battle-popup-header');
+                    header.addEventListener('mousedown', (e) => {
+                        if (e.target === closeBtn) return;
+                        isDragging = true;
+                        dragElement = popup;
+                        const rect = popup.getBoundingClientRect();
+                        dragOffsetX = e.clientX - rect.left;
+                        dragOffsetY = e.clientY - rect.top;
+                        if (!popup.classList.contains('pinned')) {
+                            pinPopup(popup, cell);
+                        }
+                        e.preventDefault();
+                    });
+
+                    // 阻止内容区域的点击事件冒泡
+                    popup.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                });
+            });
+
+            // 全局鼠标事件处理拖拽
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging || !dragElement) return;
+
+                dragElement.style.left = (e.clientX - dragOffsetX) + 'px';
+                dragElement.style.top = (e.clientY - dragOffsetY) + 'px';
+
+                // 更新位置记录
+                popupPositions.set(dragElement, {
+                    x: parseInt(dragElement.style.left),
+                    y: parseInt(dragElement.style.top)
+                });
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging && dragElement) {
+                    // 更新位置记录
+                    popupPositions.set(dragElement, {
+                        x: parseInt(dragElement.style.left),
+                        y: parseInt(dragElement.style.top)
+                    });
+                }
+                isDragging = false;
+                dragElement = null;
+            });
+
+            // 添加重置函数
+            function resetCoordPopups() {
+                // 关闭所有可见弹窗
+                allPopups.forEach(popup => {
+                    popup.classList.remove('visible', 'pinned');
+
+                    // 移除单元格的固定状态
+                    const cell = popup.closest('.coords-cell, .has-battle-events');
+                    if (cell) {
+                        cell.classList.remove('pinned');
+                    }
+                });
+
+                // 清除位置记录
+                popupPositions = new WeakMap();
+                pinnedPopup = null;
+
+                // 重新定位所有弹窗到单元格中间
+                coordsCells.forEach(cell => {
+                    const popup = cell.querySelector('.coord-popup');
+                    if (popup) { positionPopup(popup, cell); }
+                });
+                battleCells.forEach(cell => {
+                    const popups = cell.querySelectorAll('.battle-popup');
+                    popups.forEach(popup => positionPopup(popup, cell));
+                });
+            }
+
+            // 暴露重置函数到全局
+            window.resetCoordPopups = resetCoordPopups;
+
+            // 窗口大小变化时重新定位
+            window.addEventListener('resize', () => {
+                document.querySelectorAll('.coord-popup.visible, .battle-popup.visible').forEach(popup => {
+                    // 如果弹窗有位置记录，调整位置确保在视口内
+                    if (popupPositions.has(popup)) {
+                        const pos = popupPositions.get(popup);
+                        const popupRect = popup.getBoundingClientRect();
+
+                        // 检查位置是否在视口内
+                        let newLeft = pos.x;
+                        let newTop = pos.y;
+
+                        if (newLeft + popupRect.width > window.innerWidth) {
+                            newLeft = window.innerWidth - popupRect.width - 5;
+                        }
+                        if (newTop + popupRect.height > window.innerHeight) {
+                            newTop = window.innerHeight - popupRect.height - 5;
+                        }
+                        if (newLeft < 5) newLeft = 5;
+                        if (newTop < 5) newTop = 5;
+
+                        // 更新位置
+                        popup.style.left = newLeft + 'px';
+                        popup.style.top = newTop + 'px';
+
+                        // 更新位置记录
+                        popupPositions.set(popup, { x: newLeft, y: newTop });
+                    } else {
+                        // 如果没有位置记录，重新定位到单元格中间
+                        const cell = popup.closest('.coords-cell, .has-battle-events');
+                        if (cell) {
+                            positionPopup(popup, cell);
+                        }
+                    }
+                });
+            });
+        }
+
+        // 文件处理流程
+        async function processFiles(files) {
+            return files
+                .map(file => ({
+                    file, // 保留原始File对象
+                    date: parseDateFromFileName(file.name)
+                }))
+                .sort((a, b) => a.date - b.date) // 按日期从旧到新排序
+                .map(entry => ({
+                    file: entry.file, // 直接传递File对象
+                    date: entry.date
+                }));
+        }
+
+        // 从文件名解析日期
+        function parseDateFromFileName(fileName) {
+            const match = fileName.match(/(\d{4})(\d{2})(\d{2})/);
+            if (match) {
+                return new Date(
+                    parseInt(match[1]),
+                    parseInt(match[2]) - 1,
+                    parseInt(match[3])
+                );
+            }
+            return new Date(0); // 无效日期置前
+        }
+
+        // 日志解析逻辑
+        function parseLog(content, fileDate) {
+            const lines = content.split('\n');
+            let prevLine = "";
+            let lastCoord = null; // 新增：用于跟踪最近的坐标
+            let battleCount = 0; // 自动战斗计数器
+
+            lines.forEach(line => {
+                // 解析配置组
+                let match = line.match(/配置组 "(.+?)" 加载完成/);
+                if (match) {
+                    const groupName = match[1];
+                    let group = parsingContext.activeGroups.get(groupName) || {
+                        name: groupName,
+                        startTime: parseTime(prevLine, fileDate),
+                        endTime: null,
+                        tasks: [],
+                        picks: new Map(),
+                        lastActive: null
+                    };
+                    group.lastActive = parseTime(prevLine, fileDate);
+                    parsingContext.activeGroups.set(groupName, group);
+                    battleCount = 0; // 重置战斗计数器
+                }
+
+                // match = line.match(/→ "任务结束"/);
+                match = line.match(/配置组 "(.+?)" 执行结束/);
+                if (match) {
+                    const group = parsingContext.activeGroups.get(match[1]);
+                    if (group) {
+                        group.endTime = parseTime(prevLine, fileDate);
+                        parsingContext.allGroups.push(group);
+                        parsingContext.activeGroups.delete(match[1]);
+                    }
+                }
+
+                // 解析任务
+                const currentGroup = Array.from(parsingContext.activeGroups.values()).pop();
+                if (currentGroup) {
+                    // 检测自动战斗开始
+                    if (line.includes('执行 "自动战斗"')) {
+                        battleCount++;
+                    }
+
+                    // match = line.match(/→ 开始执行地图追踪任务: "(.+?)"/);
+                    // match = line.match(/→ 开始执行路径追踪任务: "(.+?)"/)
+                    // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"/);
+                    // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)/);
+                    // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)/);
+                    match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
+                    if (match) {
+                        const taskName = match[1] || match[2] || match[3] || match[4];
+                        const task = {
+                            name: taskName,
+                            startTime: parseTime(prevLine, fileDate),
+                            endTime: null,
+                            faults: {
+                                revive: 0,
+                                teleport: 0,
+                                retry: 0,
+                                retryDetail: 0,
+                                too_far_skip: 0,
+                                timeout: 0
+                            },
+                            picks: new Map(),
+                            reviveEvents: [], // 新增：复活事件
+                            timeoutEvents: [], // 新增：超时事件
+                            maxBattleCount: 0 // 记录最大战斗次数
+                        };
+                        currentGroup.tasks.push(task);
+                        parsingContext.activeTasks.set(task.name, task);
+                        battleCount = 0; // 新任务重置战斗计数器
+                    }
+
+                    match = line.match(/→ 脚本执行结束: "(.+?)"/);
+                    if (match) {
+                        const task = parsingContext.activeTasks.get(match[1]);
+                        if (task) {
+                            task.endTime = parseTime(prevLine, fileDate);
+                            parsingContext.activeTasks.delete(task.name);
+                        }
+                    }
+
+                    // 统计信息
+                    const currentTask = currentGroup.tasks[currentGroup.tasks.length - 1];
+                    if (currentTask) {
+                        // 更新最大战斗次数
+                        if (battleCount > currentTask.maxBattleCount) {
+                            currentTask.maxBattleCount = battleCount;
+                        }
+
+                        // 捕获坐标信息（无论是否在卡死前）
+                        const coordMatch = line.match(/粗略接近途经点，位置\("(-?\d+(?:\.\d+)?)","(-?\d+(?:\.\d+)?)"\)/);
+                        if (coordMatch) {
+                            lastCoord = { x: coordMatch[1], y: coordMatch[2] };
+                        }
+
+                        // if (line.includes("前往七天神像复活")) currentTask.faults.revive++;
+
+                        // 复活事件
+                        if (line.includes("血量恢复完成。")) {
+                            currentTask.faults.revive++;
+                            // 记录复活事件对应的战斗序号和坐标
+                            currentTask.reviveEvents.push({
+                                battleCount: battleCount,
+                                coord: lastCoord ? { x: lastCoord.x, y: lastCoord.y } : null
+                            });
+                        }
+
+                        if (line.includes("当前角色血量过低")) currentTask.faults.revive = currentTask.faults.revive - 0.9;
+                        if (line.match(/传送失败，重试 (\d+) 次/))
+                            currentTask.faults.teleport = parseInt(RegExp.$1);
+                        // if (line.includes("重试一次路线")) currentTask.faults.retry++;
+                        if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
+                        if (line.includes("疑似卡死，尝试脱离...")) {
+                            currentTask.faults.retryDetail++;
+
+                            // 使用最近捕获的坐标
+                            if (lastCoord) {
+                                if (!currentTask.faults.coords) {
+                                    currentTask.faults.coords = [];
+                                }
+                                currentTask.faults.coords.push(lastCoord);
+                            }
+                            // 重置坐标缓存
+                            lastCoord = null;
+                        }
+                        // if (line.includes("距离过远，跳过路径点")) currentTask.faults.too_far_skip++;
+                        if (line.includes("距离过远") && /\(\d+\.?\d*,\d+\.?\d*\)->\(\d+\.?\d*,\d+\.?\d*\)=\d+\.?\d*，跳过路径点/)
+                            currentTask.faults.too_far_skip++;
+
+                        // 战斗超时事件
+                        if (line.includes("战斗超时")) {
+                            currentTask.faults.timeout++;
+                            // 记录超时事件对应的战斗序号
+                            currentTask.timeoutEvents.push(battleCount);
+                        }
+                        // 检测脚本未正常走完的提示
+                        // 检测特定事件并记录
+                        if (line.includes("开始自动领取派遣任务！")) {
+                            currentTask.hasDispatch = true; // 标记有派遣任务
+                        }
+                        if (line.includes("快捷键触发暂停，等待解除")) {
+                            currentTask.hasPause = true; // 标记有暂停事件
+                        }
+                        if (line.includes("此追踪脚本未正常走完！")) {
+                            currentTask.abnormalEnd = true; // 标记异常结束
+                        }
+                        const pickMatch = line.match(/交互或拾取："(.+?)"/);
+
+                        if (pickMatch) {
+                            currentTask.picks.set(pickMatch[1], (currentTask.picks.get(pickMatch[1]) || 0) + 1);
+                            currentGroup.picks.set(pickMatch[1], (currentGroup.picks.get(pickMatch[1]) || 0) + 1);
+                        }
+                    }
+                }
+                prevLine = line;
+            });
+        }
+
+        function finalizeParsing() {
+            // 处理未完成任务
+            parsingContext.activeTasks.forEach(task => {
+                task.endTime = task.startTime;
+            });
+
+            // 处理未完成配置组
+            parsingContext.activeGroups.forEach(group => {
+                group.endTime = group.tasks.length > 0
+                    ? group.tasks[group.tasks.length - 1].startTime
+                    : group.startTime;
+                parsingContext.allGroups.push(group);
+            });
+
+            return parsingContext.allGroups.sort((a, b) =>
+                (b.endTime || b.startTime) - (a.endTime || a.startTime)
+            );
+        }
+
+        function formatDuration(seconds) {
+            if (seconds < 0) return "时间异常"; // 处理负值情况
+
+            const days = Math.floor(seconds / 86400);
+            seconds %= 86400;
+            const hours = Math.floor(seconds / 3600);
+            seconds %= 3600;
+            const minutes = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+
+            let result = [];
+            if (days > 0) result.push(`${days}天`);
+            if (hours > 0) result.push(`${hours}小时`);
+            if (minutes > 0) result.push(`${minutes}分钟`);
+            if (sec > 0 || result.length === 0) {
+                result.push(sec % 1 === 0 ? `${sec}秒` : `${sec.toFixed(2)}秒`);
+            }
+
+            return result.join('') || "0秒";
+        }
+
+        // 新增耗时计算函数
+        function calculateDuration(start, end) {
+            if (!start || !end) return '进行中';
+            const diff = (end.getTime() - start.getTime()) / 1000;
+            return formatDuration(diff);
+        }
+
+        // 新增配置组耗时计算
+        function calculateGroupDuration(group) {
+            if (!group.startTime || !group.endTime) return '进行中';
+            const diff = (group.endTime.getTime() - group.startTime.getTime()) / 1000;
+            return formatDuration(diff);
+        }
+
+        // 新的耗时计算函数
+        function formatDuration(totalSeconds) {
+            if (totalSeconds <= 0) return "0秒";
+
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            let result = "";
+
+            if (hours > 0) {
+                result += `${hours}小时`;
+            }
+
+            if (minutes > 0 || hours > 0) {
+                result += `${minutes}分钟`;
+            }
+
+            if (seconds > 0 || (hours === 0 && minutes === 0)) {
+                if (seconds % 1 === 0) {
+                    result += `${Math.floor(seconds)}秒`;
+                } else {
+                    result += `${seconds.toFixed(2)}秒`;
+                }
+            }
+
+            return result || "0秒";
+        }
+
+        // 时间解析辅助函数
+        function parseTime(line, fileDate) {
+            const timeMatch = line?.match(/\[(\d{2}):(\d{2}):(\d{2})\.\d+\]/);
+            if (!timeMatch) return null;
+
+            // 创建基础时间对象
+            const baseDate = new Date(fileDate);
+            const hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2]);
+            const seconds = parseInt(timeMatch[3]);
+
+            // 智能日期推算
+            const currentTime = new Date(baseDate);
+            currentTime.setHours(hours, minutes, seconds);
+
+            // 处理跨日情况
+            if (lastValidTime && currentTime < lastValidTime) {
+                // 如果时间回退超过4小时，视为次日（兼容凌晨4点刷新机制）
+                if ((lastValidTime - currentTime) > 4 * 60 * 60 * 1000) {
+                    currentTime.setDate(currentTime.getDate() + 1);
+                }
+            }
+
+            lastValidTime = currentTime;
+            return currentTime;
+        }
+
+        // 重写全屏功能 - 使用更可靠的方法
+        function toggleFullScreen() {
+            const doc = window.document;
+            const docEl = doc.documentElement;
+
+            // 检查当前全屏状态
+            const isFullScreen =
+                doc.fullscreenElement ||
+                doc.webkitFullscreenElement ||
+                doc.mozFullScreenElement ||
+                doc.msFullscreenElement;
+
+            // 切换全屏状态
+            if (!isFullScreen) {
+                // 进入全屏
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen();
+                } else if (docEl.mozRequestFullScreen) { // Firefox
+                    docEl.mozRequestFullScreen();
+                } else if (docEl.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                    docEl.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                } else if (docEl.msRequestFullscreen) { // IE/Edge
+                    docEl.msRequestFullscreen();
+                }
+            } else {
+                // 退出全屏
+                if (doc.exitFullscreen) {
+                    doc.exitFullscreen();
+                } else if (doc.mozCancelFullScreen) { // Firefox
+                    doc.mozCancelFullScreen();
+                } else if (doc.webkitExitFullscreen) { // Chrome, Safari and Opera
+                    doc.webkitExitFullscreen();
+                } else if (doc.msExitFullscreen) { // IE/Edge
+                    doc.msExitFullscreen();
+                }
+            }
+        }
+
+        // 切換全屏模式
+        function changeFullScreen() {
+            // 判断当前是否全屏
+            if (!document.fullscreenElement) {
+                // 进入全屏（兼容不同浏览器）
+                const element = document.documentElement;
+                if (element.requestFullscreen) {
+                    element.requestFullscreen().catch(err => {
+                        console.error(`全屏请求错误: ${err.message}`);
+                    });
+                } else if (element.mozRequestFullScreen) { // Firefox
+                    element.mozRequestFullScreen();
+                } else if (element.webkitRequestFullscreen) { // Chrome/Safari
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) { // IE/Edge
+                    element.msRequestFullscreen();
+                }
+            } else {
+                // 退出全屏（兼容不同浏览器）
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome/Safari
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // HTML生成逻辑
+        function generateHTML(groups) {
+            let html = '<div style="width: 100%;">';
+
+            groups.forEach((group, index) => {
+                html += `
+                <div class="group-container">
+                <div class="group-header" data-group-index="${index}">
+                    <span class="arrow">▶</span>
+            <h2>配置组：${group.name} (${formatDateTime(group.startTime)} - ${group.endTime ? `${formatDateTime(group.endTime)}) <span style="font-size:14px;color:#666;margin-left:10px;">耗时${calculateGroupDuration(group)}</span>` : '进行中)'}</h2>
+            </div>
+            <div class="collapsible" id="group-${index}">
+            <table>
+                <tr>
+                    <th>任务名称</th>
+                    <th>开始时间</th>
+                    <th>结束时间</th>
+                    <th>耗时</th>
+                    <th>复活次数</th>
+                    <th>重试次数</th>
+                    <th>疑似卡死次数</th>
+                    <th>过远跳过</th>
+                    <th>战斗超时</th>
+                    <th>传送失败</th>
+                    <th>拾取物</th>
+                </tr>`;
+
+                group.tasks.forEach(task => {
+
+                    const hasCoords = task.faults.coords && task.faults.coords.length > 0;
+
+                    // 生成复活事件弹窗
+                    let revivePopupHTML = '';
+                    let hasReviveEvents = false;
+                    if (task.reviveEvents && task.reviveEvents.length > 0) {
+                        hasReviveEvents = true;
+                        revivePopupHTML = '<div class="battle-popup">';
+                        revivePopupHTML += '<div class="battle-popup-header">';
+                        revivePopupHTML += '<div class="battle-popup-title">自动战斗与复活事件</div>';
+                        revivePopupHTML += '<span class="close-btn">×</span>';
+                        revivePopupHTML += '</div>';
+                        revivePopupHTML += '<div class="battle-popup-content">';
+
+                        // 按battleCount分组
+                        const eventsByBattleCount = {};
+                        task.reviveEvents.forEach(event => {
+                            if (!eventsByBattleCount[event.battleCount]) {
+                                eventsByBattleCount[event.battleCount] = [];
+                            }
+                            eventsByBattleCount[event.battleCount].push(event);
+                        });
+
+                        // 处理战斗前的复活事件（battleCount为0）
+                        if (eventsByBattleCount[0] && eventsByBattleCount[0].length > 0) {
+                            eventsByBattleCount[0].forEach(event => {
+                                const coordText = event.coord ? `(X=${event.coord.x}, Y=${event.coord.y})` : '';
+                                revivePopupHTML += `<div class="battle-item">${coordText}</div>`;
+                            });
+                        }
+
+                        // 生成完整的战斗序列（从1到最大战斗次数）
+                        for (let i = 1; i <= task.maxBattleCount; i++) {
+                            const events = eventsByBattleCount[i] || [];
+
+                            if (events.length > 0) {
+                                // 有复活事件，显示坐标
+                                const coords = events.map(e => e.coord ? `(X=${e.coord.x}, Y=${e.coord.y})` : '').filter(text => text);
+                                const coordText = coords.length > 0 ? '：' + coords.join('、') : '';
+                                revivePopupHTML += `<div class="battle-item">${i}${coordText}</div>`;
+                            } else {
+                                // 无复活事件，只显示序号
+                                revivePopupHTML += `<div class="battle-item">${i}</div>`;
+                            }
+                        }
+
+                        revivePopupHTML += '</div></div>';
+                    }
+
+                    // 生成坐标弹窗HTML
+                    let coordPopupHTML = '';
+                    if (hasCoords) {
+                        coordPopupHTML = '<div class="coord-popup">';
+                        coordPopupHTML += '<div class="coord-popup-header">';
+                        coordPopupHTML += '<div class="coord-popup-title">卡死点坐标</div>';
+                        coordPopupHTML += '<span class="close-btn">×</span>';
+                        coordPopupHTML += '</div>';
+                        coordPopupHTML += '<div class="coord-popup-content">';
+
+                        task.faults.coords.forEach((coord, idx) => {
+                            coordPopupHTML += `<div class="coord-item">`;
+                            coordPopupHTML += `<strong>#${idx + 1}</strong><br>`;
+                            coordPopupHTML += `X: ${coord.x}<br>Y: ${coord.y}`;
+                            coordPopupHTML += '</div>';
+                        });
+
+                        coordPopupHTML += '</div></div>';
+                    }
+
+                    // 生成超时事件弹窗
+                    let timeoutPopupHTML = '';
+                    let hasTimeoutEvents = false;
+                    if (task.timeoutEvents && task.timeoutEvents.length > 0) {
+                        hasTimeoutEvents = true;
+                        timeoutPopupHTML = '<div class="battle-popup">';
+                        timeoutPopupHTML += '<div class="battle-popup-header">';
+                        timeoutPopupHTML += '<div class="battle-popup-title">自动战斗与超时事件</div>';
+                        timeoutPopupHTML += '<span class="close-btn">×</span>';
+                        timeoutPopupHTML += '</div>';
+                        timeoutPopupHTML += '<div class="battle-popup-content">';
+
+                        // 生成完整的战斗序列（从1到最大战斗次数）
+                        for (let i = 1; i <= task.maxBattleCount; i++) {
+                            const hasEvent = task.timeoutEvents.includes(i);
+                            timeoutPopupHTML += `<div class="battle-item">${i}${hasEvent ? '(X)' : ''}</div>`;
+                        }
+
+                        timeoutPopupHTML += '</div></div>';
+                    }
+
+                    // 设置单元格类 - 只在有事件时添加可点击类
+                    const reviveCellClass = hasReviveEvents ? 'has-battle-events' : 'no-events';
+                    const timeoutCellClass = hasTimeoutEvents ? 'has-battle-events' : 'no-events';
+
+                    // 判断是否需要将任务名和耗时标红
+                    const shouldHighlight =
+                        task.faults.retry > 0 &&
+                        task.faults.retryDetail === 0 &&
+                        task.faults.revive === 0;
+
+                    // 格式化revive值：整数显示整数，小数显示两位小数
+                    let reviveDisplay = '';
+                    if (task.faults.revive !== 0) {
+                        if (Number.isInteger(task.faults.revive)) {
+                            reviveDisplay = task.faults.revive;
+                        } else {
+                            // 确保小数部分有两位
+                            reviveDisplay = task.faults.revive.toFixed(2);
+                        }
+                    }
+
+                    // 计算任务耗时
+                    const duration = calculateDuration(task.startTime, task.endTime);
+
+                    // 单元格类 - 如果有坐标数据添加 has-coords 类
+                    const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
+
+                    // 生成拾取物显示文本
+                    let picksText = formatPicks(task.picks);
+
+                    // 按顺序添加提示文本
+                    const alerts = [];
+
+                    // 1. 快捷键暂停
+                    if (task.hasPause) {
+                        alerts.push('<span class="pause-alert">快捷键暂停</span>');
+                    }
+
+                    // 2. 领取派遣任务
+                    if (task.hasDispatch) {
+                        alerts.push('<span class="dispatch-alert">领取派遣任务</span>');
+                    }
+
+                    // 3. 脚本未正常走完
+                    if (task.abnormalEnd) {
+                        alerts.push('<span class="abnormal-alert">追踪脚本未正常走完！</span>');
+                    }
+
+                    // 如果有提示，添加到拾取物文本
+                    if (alerts.length > 0) {
+                        if (picksText === '无') {
+                            picksText = alerts.join('<br>');
+                        } else {
+                            picksText += '<br>' + alerts.join('<br>');
+                        }
+                    }
+
+                    html += `
+                <tr>
+                    <td class="${shouldHighlight ? 'task-name-red' : ''}">${task.name}</td>
+                    <td>${formatDateTime(task.startTime)}</td>
+                    <td>${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
+                    <td class="${shouldHighlight ? 'duration-red' : ''}">${duration}</td>
+                    <td class="${reviveCellClass} ${task.faults.revive >= 2 ? 'red' : ''}">
+                        ${reviveDisplay}
+                        ${revivePopupHTML}
+                    </td>
+                    <td class="${task.faults.retry >= 2 ? 'red' : ''}">${task.faults.retry == 0 ? '' : task.faults.retry}</td>
+                    <td class="${cellClass} ${task.faults.retryDetail >= 2 ? '' : ''}">
+                        ${task.faults.retryDetail == 0 ? '' : task.faults.retryDetail}
+                        ${coordPopupHTML}
+                    </td>
+                    <td class="${task.faults.too_far_skip >= 2 ? 'red' : 'red'}">${task.faults.too_far_skip == 0 ? '' : task.faults.too_far_skip}</td>
+                    <td class="${timeoutCellClass} ${task.faults.timeout >= 1 ? 'red' : ''}">
+                        ${task.faults.timeout == 0 ? '' : task.faults.timeout}
+                        ${timeoutPopupHTML}
+                    </td>
+                    <td class="${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
+                    <td>${picksText}</td>
+                </tr>`;
+                });
+
+                html += `
+            <tr>
+                <td colspan="11">
+                    <strong>拾取物总计：</strong>
+                    ${formatPicks(group.picks)}
+                </td>
+            </tr>
+            </table>
+            </div>
+            </div>`;
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        // 格式化日期时间
+        function formatDateTime(date) {
+            if (!date) return '未知时间';
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // 新增折叠功能事件处理
+        function setupCollapse() {
+            document.querySelectorAll('.group-header').forEach(header => {
+                header.addEventListener('click', function () {
+                    const groupIndex = this.dataset.groupIndex;
+                    const content = document.getElementById(`group-${groupIndex}`);
+                    const arrow = this.querySelector('.arrow');
+
+                    content.classList.toggle('collapsed');
+                    arrow.classList.toggle('collapsed');
+                });
+            });
+        }
+
+        // 格式化拾取物
+        function formatPicks(picks) {
+            if (picks.size === 0) return '无';
+            return Array.from(picks.entries())
+                .sort((a, b) => b[1] - a[1]) // 按数量从多到少排序
+                .map(([item, count]) => `${item} (${count})`)
+                .join(', ');
+        }
+        // 監聽鍵盤按下
+        document.onkeydown = function (e) {
+            var keyNum = e;       // // 使用事件对象而不是 window.event
+            if (keyNum.keyCode == 55) {
+                // 7 計算原神下次40體時間
+                // 呼叫視窗、要求現在體力
+                var ps = prompt("輸入現在_原神_體力", "");
+                ps = ps.split(",")
+
+                // 判定是否數字
+                if (isFinite(ps[0])) {
+                    // 是否有參數次數                        
+                    if (isFinite(ps[1])) {
+                        var endText = "下次_原神_40體力_時間大約為"
+                        for (var i = 0; i < Number(ps[1]); i++) {
+                            endText = endText + "___" + GCSRT(Number(ps[0]), 40 * (i + 1), 8);
+                        }
+                        // 輪出結果
+                        alert(endText);
+                    } else {
+                        alert("下次_原神_40體力_時間大約為___" + GCSRT(Number(ps), 40, 8) + "___" + GCSRT(Number(ps), 80, 8) + "。。。。。。" + GCSRT(Number(ps), 200, 8));
+                    }
+                } else {
+                    alert("請輸入數字");
+                }
+            } else if (keyNum.keyCode == 57) {
+                // 9 計算任務距離時間
+                handleDateComparison();
+            } else if (keyNum.keyCode == 96 || keyNum.keyCode == 48) {
+                // 右0 幫助
+                var help_text = "";
+                help_text += "~   切換淺色模式,深色模式\n"
+                help_text += "Alt+f 进入或退出全屏模式\n"
+                help_text += "9   計算BGI日志格式 與現在距離 時間\n"
+                help_text += "右2 計算BGI日志格式 +3天\n"
+                help_text += "右3 計算BGI日志格式 運行時間\n"
+                help_text += "右5 計算N天后 日期\n"
+                help_text += "右7 計算原神 下次120體時間\n"
+                help_text += "右8 計算HH-MM后 時間\n"
+                help_text += "右9 計算BGI日志格式 +46小時后時間\n\n"
+                help_text += "鼠标移到\"疑似卡死次数\"、显示卡死点XY轴\n"
+                help_text += "鼠标移到\"复活次数\" 或 \"战斗超时\"、显示复活或超时在第几次戰鬥出現\n"
+                help_text += "R 重置彈窗\n"
+                alert(help_text);
+
+            } else if (keyNum.keyCode == 98) {
+                // 計算BGI日志格式 +3天
+                addThreeDaysSimple();
+            } else if (keyNum.keyCode == 99) {
+                // 右3 計算運行時間
+                calculateTimeDifference();
+            } else if (keyNum.keyCode == 101) {
+                // 右5 計算+N天數
+                handleAddDays();
+            } else if (keyNum.keyCode == 103) {
+                // 右7 計算原神下次120體時間
+                // 呼叫視窗、要求現在體力
+                var ps = prompt("輸入現在_原神_體力", "");
+                ps = ps.split(",")
+
+                // 判定是否數字
+                if (isFinite(ps[0])) {
+                    // 是否有參數次數                        
+                    if (isFinite(ps[1])) {
+                        var endText = "下次_原神_120體力_時間大約為"
+                        for (var i = 0; i < Number(ps[1]); i++) {
+                            endText = endText + "___" + GCSRT(Number(ps[0]), 120 * (i + 1), 8);
+                        }
+                        // 輪出結果
+                        alert(endText);
+                    } else {
+                        alert("下次_原神_120體力_時間大約為___" + GCSRT(Number(ps), 120, 8) + "。。。。。。" + GCSRT(Number(ps), 200, 8));
+                    }
+                } else {
+                    alert("請輸入數字");
+                }
+            } else if (keyNum.keyCode == 104) {
+                // 右8 計算任務HH.MM后時間
+                handleAddCustomTime();
+            } else if (keyNum.keyCode == 105) {
+                // 右9 計算任務46小時后時間
+                handleDateAddition();
+            } else if (keyNum.keyCode == 70 && keyNum.altKey) {
+                // alt +  f
+                toggleFullScreen();
+                e.preventDefault(); // 阻止默认行为
+                return;
+            } else if (keyNum.keyCode == 192) {
+                document.body.classList.toggle('dark-theme'); // 切换暗色主题
+            } else if (keyNum.keyCode == 87) {
+                // W 畫面向上移
+                dropZone.scrollBy(0, -150);
+            } else if (keyNum.keyCode == 83) {
+                // S 畫面向下移
+                dropZone.scrollBy(0, 150);
+            } else if (keyNum.keyCode == 110 || keyNum.keyCode == 190) {
+                // 左. 右. 同視窗開新頁面
+                window.open("index.html");
+            } else if (keyNum.keyCode === 82) {
+                // R键
+                if (window.resetCoordPopups) {
+                    window.resetCoordPopups();
+                }
+                e.preventDefault(); // 阻止默认行为
+            }
+        }
+
+        /**
+         * 計算體力恢復完成的時間
+         * calculateStaminaRecoveryTime
+         * GCSRT(現在體力,原40or尘30,原8or尘6)
+         * @param {number} currentStamina 當前體力值
+         * @param {number} targetStamina 需要達到的目標體力值
+         * @param {number} minutesPerPoint 每恢復1點體力需要的分鐘數
+         * @returns {object} 包含恢復完成的時間（Date 對象）和格式化時間字符串的對象
+         */
+        function GCSRT(currentStamina, targetStamina, minutesPerPoint) {
+            // 參數校驗
+            if (typeof currentStamina !== 'number' ||
+                typeof targetStamina !== 'number' ||
+                typeof minutesPerPoint !== 'number') {
+                throw new Error('所有參數必須是數字類型');
+            }
+
+            // 如現時體力超過目標，減去現時體力、計算下次目標體力
+            if (currentStamina >= targetStamina) {
+                currentStamina = currentStamina - targetStamina;
+                targetStamina = targetStamina + targetStamina;
+            }
+
+            // 計算體力差
+            const staminaDifference = targetStamina - currentStamina;
+
+            // 計算總需要分鐘數
+            const totalMinutes = staminaDifference * minutesPerPoint;
+
+            // 計算恢復完成的時間
+            const now = new Date(); // 當前時間
+            const recoveryTime = new Date(now.getTime() + totalMinutes * 60000); // 加上總分鐘數
+
+            // 格式化時間輸出
+            const formattedTime = recoveryTime.toLocaleString(); // 根據本地時間格式顯示
+
+            return ` ${recoveryTime.getHours()} : ${recoveryTime.getMinutes()}`;
+        }
+
+        // 計算時間差
+        function handleDateComparison() {
+            // 获取用户输入
+            const input = prompt("請輸入日期時間（格式：YYYY/MM/DD HH:mm:ss）");
+
+            // 验证输入是否为空
+            if (input === null || input.trim() === "") {
+                // alert("輸入已取消或為空！");
+                console.log("輸入已取消或為空！");
+                return;
+            }
+
+            // 验证格式正则表达式
+            const formatRegex = /^\d{4}[-\/]\d{2}[-\/]\d{2} \d{2}:\d{2}:\d{2}$/;
+            if (!formatRegex.test(input)) {
+                alert("格式錯誤！請嚴格按照示例格式輸入");
+                return;
+            }
+
+            // 解析日期
+            const parseDate = (str) => {
+                const [datePart, timePart] = str.split(" ");
+                const [year, month, day] = datePart.split(/[-\/]/).map(Number); // 使用正則分割符
+                const [hours, minutes, seconds] = timePart.split(":").map(Number);
+                return new Date(year, month - 1, day, hours, minutes, seconds);
+            };
+
+            try {
+                const targetDate = parseDate(input);
+                const now = new Date();
+
+                // 检查日期有效性
+                if (isNaN(targetDate.getTime())) {
+                    throw new Error("無效的日期時間");
+                }
+
+                // 计算时间差（毫秒）
+                const diff = targetDate - now;
+
+                // 格式化时间差
+                const formatDuration = (ms) => {
+                    const seconds = Math.floor(Math.abs(ms) / 1000);
+                    const days = Math.floor(seconds / 86400);
+                    const hours = Math.floor((seconds % 86400) / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    const sec = seconds % 60;
+                    return `${days}天 ${hours}小時 ${minutes}分鐘 ${sec}秒`;
+                };
+
+                if (diff < 0) {
+                    alert(`距離 ${input} 已經過去了：\n${formatDuration(diff)}`);
+                } else {
+                    alert(`距離 ${input} 還有：\n${formatDuration(diff)}`);
+                }
+            } catch (e) {
+                alert(`錯誤：${e.message}`);
+            }
+        }
+
+        // BGI格式日期+3天
+        function addThreeDaysSimple() {
+            // 获取用户输入
+            const input = prompt("請輸入日期（格式：指定日期格式）\n例如：2025/05/22 或 2025-05-22");
+
+            // 验证输入是否为空
+            if (input === null || input.trim() === "") {
+                alert("輸入已取消或為空！");
+                return;
+            }
+
+            // 更灵活的格式正则表达式（支持 / 和 - 分隔符）
+            const formatRegex = /^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/;
+            const formatRegex2 = /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/;
+            if (!formatRegex.test(input) && !formatRegex2.test(input)) {
+                alert("格式錯誤！請使用 YYYY/MM/DD 或 YYYY-MM-DD 格式輸入");
+                return;
+            }
+
+            // 解析日期（支持 / 和 - 分隔符）
+            const parseDate = (str) => {
+                const separator = str.includes('/') ? '/' : '-';
+                const parts = str.split(separator);
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // 月份从0开始
+                const day = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            };
+
+            try {
+                const inputDate = parseDate(input);
+
+                // 检查日期有效性
+                if (isNaN(inputDate.getTime())) {
+                    throw new Error("無效的日期");
+                }
+
+                // 添加3天
+                const resultDate = new Date(inputDate);
+                resultDate.setDate(resultDate.getDate() + 3);
+
+                // 格式化日期函数（仅显示年月日）
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}/${month}/${day}`;
+                };
+
+                // 显示结果
+                alert(
+                    `原始日期：${formatDate(inputDate)}\n` +
+                    `加3天後日期：${formatDate(resultDate)}`
+                );
+
+            } catch (e) {
+                alert(`錯誤：${e.message}`);
+            }
+        }
+
+        // 計算運行時間
+        function calculateTimeDifference() {
+            // 輸入格式驗證正則
+            const timeFormatRegex = /^\d{4}[-\/]\d{2}[-\/]\d{2} \d{2}:\d{2}:\d{2}$/;
+
+            // 獲取第一個時間
+            const time1Str = prompt("請輸入第一個時間（格式：YYYY/MM/DD HH:mm:ss）\n範例：2025/05/22 10:52:05");
+            if (!time1Str || !timeFormatRegex.test(time1Str)) {
+                alert("輸入取消或格式錯誤！");
+                return;
+            }
+
+            // 獲取第二個時間
+            const time2Str = prompt("請輸入第二個時間（格式：YYYY/MM/DD HH:mm:ss）");
+            if (!time2Str || !timeFormatRegex.test(time2Str)) {
+                alert("輸入取消或格式錯誤！");
+                return;
+            }
+
+            // 解析時間函數
+            const parseTime = (str) => {
+                const [datePart, timePart] = str.split(' ');
+                const [year, month, day] = datePart.split(/[-\/]/).map(Number); // 使用正則分割符
+                const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                return new Date(year, month - 1, day, hours, minutes, seconds);
+            };
+
+            try {
+                // 解析日期對象
+                const date1 = parseTime(time1Str);
+                const date2 = parseTime(time2Str);
+
+                // 驗證日期有效性
+                if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
+                    throw new Error("包含無效日期時間");
+                }
+
+                // 計算時間差（毫秒）
+                const diffMs = date2 - date1;
+
+                // 時間差格式化
+                const formatDuration = (ms) => {
+                    const absMs = Math.abs(ms);
+                    const seconds = Math.floor(absMs / 1000);
+                    const days = Math.floor(seconds / 86400);
+                    const hours = Math.floor((seconds % 86400) / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    const secs = seconds % 60;
+                    return `${days}天 ${hours}小時 ${minutes}分鐘 ${secs}秒`;
+                };
+
+                // 判斷先後關係
+                let orderText = '';
+                if (diffMs > 0) {
+                    orderText = `${time2Str} 晚於 ${time1Str}`;
+                } else if (diffMs < 0) {
+                    orderText = `${time2Str} 早於 ${time1Str}`;
+                } else {
+                    orderText = "兩個時間完全相同";
+                }
+
+                // 顯示結果
+                alert(
+                    `時間差計算結果：\n\n` +
+                    `${orderText}\n` +
+                    `相差：${formatDuration(diffMs)}`
+                );
+
+            } catch (e) {
+                alert(`錯誤：${e.message}`);
+            }
+        }
+
+        // 計算+N天數
+        function handleAddDays() {
+            // 獲取用戶輸入
+            const input = prompt("請輸入要添加的天數");
+
+            // 驗證輸入是否為空
+            if (input === null || input.trim() === "") {
+                alert("輸入已取消或為空！");
+                return;
+            }
+
+            // 轉換為數字
+            const days = parseFloat(input);
+            if (isNaN(days)) {
+                alert("無效的數字！請輸入有效的天數");
+                return;
+            }
+
+            // 計算新日期
+            const currentDate = new Date();
+            const newDate = new Date(currentDate.getTime() + days * 86400000);
+
+            // 格式化日期函數
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}/${month}/${day}`;
+            };
+
+            // 顯示結果
+            alert(
+                `當前時間：${formatDate(currentDate)}\n` +
+                `加上 ${days} 天後的時間：${formatDate(newDate)}`
+            );
+        }
+
+        // 計算任務HH.MM后時間
+        function handleAddCustomTime() {
+            // 獲取用戶輸入
+            const input = prompt("請輸入要添加的時間（格式：hh.mm，例如 02.30）");
+
+            // 驗證輸入是否為空
+            if (input === null || input.trim() === "") {
+                alert("輸入已取消或為空！");
+                return;
+            }
+
+            // 驗證格式正則表達式
+            const timeFormatRegex = /^-?\d{1,2}\.\d{1,2}$/;
+            if (!timeFormatRegex.test(input)) {
+                alert("格式錯誤！請使用 hh.mm 格式輸入（例如 03.15 或 2.5）");
+                return;
+            }
+
+            // 解析時間
+            const [hoursStr, minutesStr] = input.split('.');
+            const hours = parseInt(hoursStr, 10);
+            const minutes = parseInt(minutesStr, 10);
+
+            // 驗證時間範圍
+            if (Math.abs(hours) > 8760) { // 防止過大數值（約1年）
+                alert("小時數值過大！");
+                return;
+            }
+            if (Math.abs(minutes) > 59) {
+                alert("分鐘數值需在 0-59 之間");
+                return;
+            }
+
+            // 計算時間差
+            const currentDate = new Date();
+            const timeToAdd =
+                hours * 60 * 60 * 1000 +
+                minutes * 60 * 1000;
+
+            // 計算新時間
+            const newDate = new Date(currentDate.getTime() + timeToAdd);
+
+            // 格式化日期函數（不顯示秒數）
+            const formatTime = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const mins = String(date.getMinutes()).padStart(2, '0');
+                return `${year}/${month}/${day} ${hours}:${mins}`;
+            };
+
+            // 顯示結果
+            alert(
+                `當前時間：${formatTime(currentDate)}\n` +
+                `加上 ${input.replace('.', '小時')}分鐘 後時間：${formatTime(newDate)}`
+            );
+        }
+
+        // 計算46小時后
+        function handleDateAddition() {
+            // 獲取用戶輸入
+            const input = prompt("請輸入日期時間（格式：YYYY/MM/DD HH:mm:ss）");
+
+            // 驗證輸入是否為空
+            if (input === null || input.trim() === "") {
+                console.log("輸入已取消或為空！");
+                return;
+            }
+
+            // 驗證格式正則表達式
+            const formatRegex = /^\d{4}[\/]\d{2}[\/]\d{2} \d{2}:\d{2}:\d{2}$/;  // 嚴格匹配斜杠
+            if (!formatRegex.test(input)) {
+                alert("格式錯誤！請嚴格按照YYYY/MM/DD HH:mm:ss格式輸入");
+                return;
+            }
+
+            // 解析日期
+            const parseDate = (str) => {
+                const [datePart, timePart] = str.split(" ");
+                const [year, month, day] = datePart.split("/").map(Number);  // 固定使用斜杠分割
+                const [hours, minutes, seconds] = timePart.split(":").map(Number);
+                return new Date(year, month - 1, day, hours, minutes, seconds);
+            };
+
+            try {
+                const targetDate = parseDate(input);
+
+                // 檢查日期有效性
+                if (isNaN(targetDate.getTime())) {
+                    throw new Error("無效的日期時間");
+                }
+
+                // 加上46小時
+                const newDate = new Date(targetDate.getTime() + 46 * 60 * 60 * 1000);
+
+                // 格式化輸出
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');  // 補零
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    const seconds = String(date.getSeconds()).padStart(2, '0');
+                    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+                };
+
+                alert(
+                    `原始時間：${input}\n` +
+                    `加上46小時後：${formatDate(newDate)}`
+                );
+            } catch (e) {
+                alert(`錯誤：${e.message}`);
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>
