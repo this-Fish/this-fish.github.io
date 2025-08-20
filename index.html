@@ -1,5 +1,12 @@
-<!-- 20250820新增了看死亡前最近的XY軸 -->
-
+<!-- 
+    20250820新增了看死亡前最近的XY軸 
+    20250821
+        修正當有卡死與复活同時存在次數時，复活顯示不出XY軸 
+        新增
+            按T鍵隱藏或顯示 开始时间&结束时间
+            按Y鍵隱藏或顯示 复活次数、重试次数、疑似卡死次数、过远跳过、战斗超时、传送失败
+            按U鍵切換表格格式（新版/舊版）
+    -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -169,7 +176,7 @@
             color: #ff6666;
         }
 
-        /* 修改弹窗样式 */
+        /* 弹窗样式 */
         .coord-popup {
             display: none;
             position: fixed;
@@ -182,7 +189,6 @@
             font-size: 14px;
             cursor: default;
             user-select: text;
-            /* 允许文本选择 */
         }
 
         .coord-popup.visible {
@@ -225,7 +231,6 @@
             padding: 3px 0;
             border-bottom: 1px dashed #ddd;
             cursor: text;
-            /* 文本选择光标 */
         }
 
         .coord-popup .coord-item:last-child {
@@ -353,6 +358,8 @@
 
         .battle-popup-content {
             padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         .battle-popup .battle-item {
@@ -390,7 +397,7 @@
             border-bottom: 1px dashed #555;
         }
 
-        /* 新增单元格样式 */
+        /* 单元格样式 */
         .has-battle-events {
             cursor: pointer;
             position: relative;
@@ -406,6 +413,128 @@
         .no-events {
             cursor: default !important;
         }
+
+        /* 新增：时间列隐藏状态样式 */
+        .time-columns-hidden .column-start-time,
+        .time-columns-hidden .column-end-time {
+            display: none;
+        }
+
+        /* 新增：时间列显示状态指示器 */
+        .time-toggle-indicator {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .time-toggle-indicator.visible {
+            opacity: 1;
+        }
+
+        /* 新增：统计列隐藏状态样式 */
+        .stats-columns-hidden .column-revive,
+        .stats-columns-hidden .column-retry,
+        .stats-columns-hidden .column-retry-detail,
+        .stats-columns-hidden .column-too-far-skip,
+        .stats-columns-hidden .column-timeout,
+        .stats-columns-hidden .column-teleport {
+            display: none;
+        }
+
+        /* 新增：统计列显示状态指示器 */
+        .stats-toggle-indicator {
+            position: fixed;
+            bottom: 60px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .legacy-format .group-header {
+            /* 移除sticky定位 */
+            position: static;
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+        }
+
+        body.dark-theme .legacy-format .group-header {
+            background-color: #333;
+        }
+
+        /* 确保表格表头保持固定 */
+        .legacy-format .sticky-header {
+            position: sticky;
+            top: 0;
+            background-color: #888;
+            z-index: 2;
+        }
+
+        .legacy-format .main-row-name {
+            /* 移除粗体 */
+            font-weight: normal;
+            background-color: #f0f0f0;
+        }
+
+        .legacy-format .sub-row {
+            background-color: #f9f9f9;
+        }
+
+        .legacy-format .ignore-sort {
+            background-color: #e0e0e0;
+        }
+
+        .ignore-sort {
+            font-weight: normal;
+        }
+
+        /* 暗色主题下的旧版表格样式 */
+        body.dark-theme .legacy-format .main-row-name {
+            background-color: #2a2a2a;
+        }
+
+        body.dark-theme .legacy-format .sub-row {
+            background-color: #1e1e1e;
+        }
+
+        body.dark-theme .legacy-format .ignore-sort {
+            background-color: #333;
+        }
+
+        /* 标题跟随页面功能 */
+        .sticky-title {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 100;
+            padding: 10px;
+            margin: -10px -10px 10px -10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-theme .sticky-title {
+            background-color: #1e1e1e;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 拾取物粗体样式 */
+        .picks-bold {
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -414,17 +543,20 @@
         <div id="dropZone" class="empty">将日志文件拖放到此处</div>
     </div>
 
-    <script>
-        window.onload = function () {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const minutes = now.getMinutes(); // 分钟
-            if ((currentHour < 6) || (currentHour === 6 && minutes <= 30)) {
-                document.body.classList.add('dark-theme');
-            }
-        };
+    <!-- 新增：时间列显示状态指示器 -->
+    <div class="time-toggle-indicator" id="timeToggleIndicator"></div>
+    <!-- 新增：统计列显示状态指示器 -->
+    <div class="stats-toggle-indicator" id="statsToggleIndicator"></div>
+    <!-- 新增：表格格式显示状态指示器 -->
+    <div class="stats-toggle-indicator" id="formatToggleIndicator" style="bottom: 110px;"></div>
 
+    <script>
+        // 全局变量
         let lastValidTime = null;
+        let timeColumnsVisible = true; // 跟踪时间列的显示状态
+        let statsColumnsVisible = true; // 跟踪统计列的显示状态
+        let useLegacyFormat = false; // 跟踪表格格式状态
+
         // 在文件解析前重置时间戳追踪
         function resetTimeTracker() {
             lastValidTime = null;
@@ -434,6 +566,17 @@
             activeTasks: new Map(),
             allGroups: []
         };
+
+        // 页面加载时检查时间并设置暗色主题
+        window.onload = function () {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const minutes = now.getMinutes(); // 分钟
+            if ((currentHour < 6) || (currentHour === 6 && minutes <= 30)) {
+                document.body.classList.add('dark-theme');
+            }
+        };
+
         // 拖放事件处理
         const dropZone = document.getElementById('dropZone');
 
@@ -479,6 +622,13 @@
                         document.getElementById(`group-${i}`).classList.toggle('collapsed');
                     };
                 });
+
+                // 应用初始时间列显示状态
+                updateTimeColumnsVisibility();
+                // 应用初始统计列显示状态
+                updateStatsColumnsVisibility();
+                // 应用初始表格格式
+                updateTableFormat();
             } catch (e) {
                 dropZone.innerHTML = `<div class="error">解析失败：${e.message}</div>`;
             }
@@ -719,12 +869,6 @@
                         }
                     });
 
-
-                    // // 在创建弹窗后添加到 allPopups
-                    // if (popup) {
-                    //     allPopups.push(popup);
-                    // }
-
                     // 添加到全局弹窗列表
                     allPopups.push(popup);
 
@@ -886,7 +1030,8 @@
         function parseLog(content, fileDate) {
             const lines = content.split('\n');
             let prevLine = "";
-            let lastCoord = null; // 新增：用于跟踪最近的坐标
+            let lastCoordForRevive = null; // 用于血量恢复完成的坐标跟踪
+            let lastCoordForStuck = null;  // 用于疑似卡死的坐标跟踪
             let battleCount = 0; // 自动战斗计数器
 
             lines.forEach(line => {
@@ -905,6 +1050,8 @@
                     group.lastActive = parseTime(prevLine, fileDate);
                     parsingContext.activeGroups.set(groupName, group);
                     battleCount = 0; // 重置战斗计数器
+                    lastCoordForRevive = null; // 重置坐标跟踪
+                    lastCoordForStuck = null;  // 重置坐标跟踪
                 }
 
                 // match = line.match(/→ "任务结束"/);
@@ -976,7 +1123,9 @@
                         // 捕获坐标信息（无论是否在卡死前）
                         const coordMatch = line.match(/粗略接近途经点，位置\("(-?\d+(?:\.\d+)?)","(-?\d+(?:\.\d+)?)"\)/);
                         if (coordMatch) {
-                            lastCoord = { x: coordMatch[1], y: coordMatch[2] };
+                            // 同时更新两个坐标跟踪器
+                            lastCoordForRevive = { x: coordMatch[1], y: coordMatch[2] };
+                            lastCoordForStuck = { x: coordMatch[1], y: coordMatch[2] };
                         }
 
                         // if (line.includes("前往七天神像复活")) currentTask.faults.revive++;
@@ -987,8 +1136,10 @@
                             // 记录复活事件对应的战斗序号和坐标
                             currentTask.reviveEvents.push({
                                 battleCount: battleCount,
-                                coord: lastCoord ? { x: lastCoord.x, y: lastCoord.y } : null
+                                coord: lastCoordForRevive ? { x: lastCoordForRevive.x, y: lastCoordForRevive.y } : null
                             });
+                            // 重置复活坐标跟踪器
+                            lastCoordForRevive = null;
                         }
 
                         if (line.includes("当前角色血量过低")) currentTask.faults.revive = currentTask.faults.revive - 0.9;
@@ -1000,14 +1151,14 @@
                             currentTask.faults.retryDetail++;
 
                             // 使用最近捕获的坐标
-                            if (lastCoord) {
+                            if (lastCoordForStuck) {
                                 if (!currentTask.faults.coords) {
                                     currentTask.faults.coords = [];
                                 }
-                                currentTask.faults.coords.push(lastCoord);
+                                currentTask.faults.coords.push(lastCoordForStuck);
+                                // 重置卡死坐标跟踪器
+                                lastCoordForStuck = null;
                             }
-                            // 重置坐标缓存
-                            lastCoord = null;
                         }
                         // if (line.includes("距离过远，跳过路径点")) currentTask.faults.too_far_skip++;
                         if (line.includes("距离过远") && /\(\d+\.?\d*,\d+\.?\d*\)->\(\d+\.?\d*,\d+\.?\d*\)=\d+\.?\d*，跳过路径点/)
@@ -1179,13 +1330,13 @@
             } else {
                 // 退出全屏
                 if (doc.exitFullscreen) {
-                    doc.exitFullscreen();
-                } else if (doc.mozCancelFullScreen) { // Firefox
-                    doc.mozCancelFullScreen();
-                } else if (doc.webkitExitFullscreen) { // Chrome, Safari and Opera
-                    doc.webkitExitFullscreen();
-                } else if (doc.msExitFullscreen) { // IE/Edge
-                    doc.msExitFullscreen();
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
                 }
             }
         }
@@ -1223,6 +1374,15 @@
 
         // HTML生成逻辑
         function generateHTML(groups) {
+            if (useLegacyFormat) {
+                return generateLegacyFormatHTML(groups);
+            } else {
+                return generateNewFormatHTML(groups);
+            }
+        }
+
+        // 新版格式HTML生成
+        function generateNewFormatHTML(groups) {
             let html = '<div style="width: 100%;">';
 
             groups.forEach((group, index) => {
@@ -1236,15 +1396,15 @@
             <table>
                 <tr>
                     <th>任务名称</th>
-                    <th>开始时间</th>
-                    <th>结束时间</th>
+                    <th class="column-start-time">开始时间</th>
+                    <th class="column-end-time">结束时间</th>
                     <th>耗时</th>
-                    <th>复活次数</th>
-                    <th>重试次数</th>
-                    <th>疑似卡死次数</th>
-                    <th>过远跳过</th>
-                    <th>战斗超时</th>
-                    <th>传送失败</th>
+                    <th class="column-revive">复活次数</th>
+                    <th class="column-retry">重试次数</th>
+                    <th class="column-retry-detail">疑似卡死次数</th>
+                    <th class="column-too-far-skip">过远跳过</th>
+                    <th class="column-timeout">战斗超时</th>
+                    <th class="column-teleport">传送失败</th>
                     <th>拾取物</th>
                 </tr>`;
 
@@ -1259,7 +1419,226 @@
                         hasReviveEvents = true;
                         revivePopupHTML = '<div class="battle-popup">';
                         revivePopupHTML += '<div class="battle-popup-header">';
-                        revivePopupHTML += '<div class="battle-popup-title">自动战斗与复活事件</div>';
+                        revivePopupHTML += '<div class="battle-popup-title">复活事件详细</div>';
+                        revivePopupHTML += '<span class="close-btn">×</span>';
+                        revivePopupHTML += '</div>';
+                        revivePopupHTML += '<div class="battle-popup-content">';
+
+                        // 按battleCount分组
+                        const eventsByBattleCount = {};
+                        task.reviveEvents.forEach(event => {
+                            if (!eventsByBattleCount[event.battleCount]) {
+                                eventsByBattleCount[event.battleCount] = [];
+                            }
+                            eventsByBattleCount[event.battleCount].push(event);
+                        });
+
+                        // 处理战斗前的复活事件（battleCount为0）
+                        if (eventsByBattleCount[0] && eventsByBattleCount[0].length > 0) {
+                            eventsByBattleCount[0].forEach(event => {
+                                const coordText = event.coord ? `(X=${event.coord.x}, Y=${event.coord.y})` : '';
+                                revivePopupHTML += `<div class="battle-item">${coordText}</div>`;
+                            });
+                        }
+
+                        // 生成完整的战斗序列（从1到最大战斗次数）
+                        for (let i = 1; i <= task.maxBattleCount; i++) {
+                            const events = eventsByBattleCount[i] || [];
+
+                            if (events.length > 0) {
+                                // 有复活事件，显示坐标
+                                const coords = events.map(e => e.coord ? `(X=${e.coord.x}, Y=${e.coord.y})` : '').filter(text => text);
+                                const coordText = coords.length > 0 ? '：' + coords.join('、') : '';
+                                revivePopupHTML += `<div class="battle-item">${i}${coordText}</div>`;
+                            } else {
+                                // 无复活事件，只显示序号
+                                revivePopupHTML += `<div class="battle-item">${i}</div>`;
+                            }
+                        }
+
+                        revivePopupHTML += '</div></div>';
+                    }
+
+                    // 生成坐标弹窗HTML
+                    let coordPopupHTML = '';
+                    if (hasCoords) {
+                        coordPopupHTML = '<div class="coord-popup">';
+                        coordPopupHTML += '<div class="coord-popup-header">';
+                        coordPopupHTML += '<div class="coord-popup-title">卡死点坐标</div>';
+                        coordPopupHTML += '<span class="close-btn">×</span>';
+                        coordPopupHTML += '</div>';
+                        coordPopupHTML += '<div class="coord-popup-content">';
+
+                        task.faults.coords.forEach((coord, idx) => {
+                            coordPopupHTML += `<div class="coord-item">`;
+                            coordPopupHTML += `<strong>#${idx + 1}</strong><br>`;
+                            coordPopupHTML += `X: ${coord.x}<br>Y: ${coord.y}`;
+                            coordPopupHTML += '</div>';
+                        });
+
+                        coordPopupHTML += '</div></div>';
+                    }
+
+                    // 生成超时事件弹窗
+                    let timeoutPopupHTML = '';
+                    let hasTimeoutEvents = false;
+                    if (task.timeoutEvents && task.timeoutEvents.length > 0) {
+                        hasTimeoutEvents = true;
+                        timeoutPopupHTML = '<div class="battle-popup">';
+                        timeoutPopupHTML += '<div class="battle-popup-header">';
+                        timeoutPopupHTML += '<div class="battle-popup-title">超时事件详细</div>';
+                        timeoutPopupHTML += '<span class="close-btn">×</span>';
+                        timeoutPopupHTML += '</div>';
+                        timeoutPopupHTML += '<div class="battle-popup-content">';
+
+                        // 生成完整的战斗序列（从1到最大战斗次数）
+                        for (let i = 1; i <= task.maxBattleCount; i++) {
+                            const hasEvent = task.timeoutEvents.includes(i);
+                            timeoutPopupHTML += `<div class="battle-item">${i}${hasEvent ? '(X)' : ''}</div>`;
+                        }
+
+                        timeoutPopupHTML += '</div></div>';
+                    }
+
+                    // 设置单元格类 - 只在有事件时添加可点击类
+                    const reviveCellClass = hasReviveEvents ? 'has-battle-events' : 'no-events';
+                    const timeoutCellClass = hasTimeoutEvents ? 'has-battle-events' : 'no-events';
+
+                    // 判断是否需要将任务名和耗时标红
+                    const shouldHighlight =
+                        task.faults.retry > 0 &&
+                        task.faults.retryDetail === 0 &&
+                        task.faults.revive === 0;
+
+                    // 格式化revive值：整数显示整数，小数显示两位小数
+                    let reviveDisplay = '';
+                    if (task.faults.revive !== 0) {
+                        if (Number.isInteger(task.faults.revive)) {
+                            reviveDisplay = task.faults.revive;
+                        } else {
+                            // 确保小数部分有两位
+                            reviveDisplay = task.faults.revive.toFixed(2);
+                        }
+                    }
+
+                    // 计算任务耗时
+                    const duration = calculateDuration(task.startTime, task.endTime);
+
+                    // 单元格类 - 如果有坐标数据添加 has-coords 类
+                    const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
+
+                    // 生成拾取物显示文本
+                    let picksText = formatPicks(task.picks);
+
+                    // 按顺序添加提示文本
+                    const alerts = [];
+
+                    // 1. 快捷键暂停
+                    if (task.hasPause) {
+                        alerts.push('<span class="pause-alert">快捷键暂停</span>');
+                    }
+
+                    // 2. 领取派遣任务
+                    if (task.hasDispatch) {
+                        alerts.push('<span class="dispatch-alert">领取派遣任务</span>');
+                    }
+
+                    // 3. 脚本未正常走完
+                    if (task.abnormalEnd) {
+                        alerts.push('<span class="abnormal-alert">追踪脚本未正常走完！</span>');
+                    }
+
+                    // 如果有提示，添加到拾取物文本
+                    if (alerts.length > 0) {
+                        if (picksText === '无') {
+                            picksText = alerts.join('<br>');
+                        } else {
+                            picksText += '<br>' + alerts.join('<br>');
+                        }
+                    }
+
+                    html += `
+                <tr>
+                    <td class="${shouldHighlight ? 'task-name-red' : ''}">${task.name}</td>
+                    <td class="column-start-time">${formatDateTime(task.startTime)}</td>
+                    <td class="column-end-time">${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
+                    <td class="${shouldHighlight ? 'duration-red' : ''}">${duration}</td>
+                    <td class="column-revive ${reviveCellClass} ${task.faults.revive >= 2 ? 'red' : ''}">
+                        ${reviveDisplay}
+                        ${revivePopupHTML}
+                    </td>
+                    <td class="column-retry ${task.faults.retry >= 2 ? 'red' : ''}">${task.faults.retry == 0 ? '' : task.faults.retry}</td>
+                    <td class="column-retry-detail ${cellClass} ${task.faults.retryDetail >= 2 ? '' : ''}">
+                        ${task.faults.retryDetail == 0 ? '' : task.faults.retryDetail}
+                        ${coordPopupHTML}
+                    </td>
+                    <td class="column-too-far-skip ${task.faults.too_far_skip >= 2 ? 'red' : 'red'}">${task.faults.too_far_skip == 0 ? '' : task.faults.too_far_skip}</td>
+                    <td class="column-timeout ${timeoutCellClass} ${task.faults.timeout >= 1 ? 'red' : ''}">
+                        ${task.faults.timeout == 0 ? '' : task.faults.timeout}
+                        ${timeoutPopupHTML}
+                    </td>
+                    <td class="column-teleport ${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
+                    <td>${picksText}</td>
+                </tr>`;
+                });
+
+                html += `
+            <tr>
+                <td colspan="11">
+                    <strong>拾取物总计：</strong>
+                    ${formatPicks(group.picks)}
+                </td>
+            </tr>
+            </table>
+            </div>
+            </div>`;
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        // 旧版格式HTML生成
+        function generateLegacyFormatHTML(groups) {
+            let html = '<div class="legacy-format" style="width: 100%;">';
+
+            groups.forEach((group, index) => {
+                html += `
+                <div class="group-container">
+                <div class="group-header" data-group-index="${index}">
+                <span class="arrow">▶</span>
+                <h2>配置组：${group.name} (${formatDateTime(group.startTime)} - ${group.endTime ? `${formatDateTime(group.endTime)}) <span style="font-size:14px;color:#666;margin-left:10px;">耗时${calculateGroupDuration(group)}</span>` : '进行中)'}</h2>
+                </div>
+                <div class="collapsible" id="group-${index}">
+                <div class="sticky-table">
+                <table>
+                    <thead>
+                    <tr class="sticky-header">
+                        <th data-sort-type="string">任务名称</th>
+                        <th class="column-start-time" data-sort-type="date">开始时间</th>
+                        <th class="column-end-time" data-sort-type="date">结束时间</th>
+                        <th data-sort-type="number">耗时</th>
+                        <th class="column-revive" data-sort-type="number">复活次数</th>
+                        <th class="column-retry" data-sort-type="number">重试次数</th>
+                        <th class="column-retry-detail" data-sort-type="number">疑似卡死</th>
+                        <th class="column-too-far-skip" data-sort-type="number">过远跳过</th>
+                        <th class="column-timeout" data-sort-type="number">战斗超时</th>
+                        <th class="column-teleport" data-sort-type="number">传送失败</th>
+                    </tr>
+                    </thead>
+                    <tbody>`;
+
+                group.tasks.forEach(task => {
+                    const hasCoords = task.faults.coords && task.faults.coords.length > 0;
+
+                    // 生成复活事件弹窗
+                    let revivePopupHTML = '';
+                    let hasReviveEvents = false;
+                    if (task.reviveEvents && task.reviveEvents.length > 0) {
+                        hasReviveEvents = true;
+                        revivePopupHTML = '<div class="battle-popup">';
+                        revivePopupHTML += '<div class="battle-popup-header">';
+                        revivePopupHTML += '<div class="battle-popup-title">复活事件详细</div>';
                         revivePopupHTML += '<span class="close-btn">×</span>';
                         revivePopupHTML += '</div>';
                         revivePopupHTML += '<div class="battle-popup-content">';
@@ -1343,6 +1722,7 @@
                     // 设置单元格类 - 只在有事件时添加可点击类
                     const reviveCellClass = hasReviveEvents ? 'has-battle-events' : 'no-events';
                     const timeoutCellClass = hasTimeoutEvents ? 'has-battle-events' : 'no-events';
+                    const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
 
                     // 判断是否需要将任务名和耗时标红
                     const shouldHighlight =
@@ -1363,9 +1743,6 @@
 
                     // 计算任务耗时
                     const duration = calculateDuration(task.startTime, task.endTime);
-
-                    // 单元格类 - 如果有坐标数据添加 has-coords 类
-                    const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
 
                     // 生成拾取物显示文本
                     let picksText = formatPicks(task.picks);
@@ -1399,39 +1776,39 @@
 
                     html += `
                 <tr>
-                    <td class="${shouldHighlight ? 'task-name-red' : ''}">${task.name}</td>
-                    <td>${formatDateTime(task.startTime)}</td>
-                    <td>${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
+                    <td class="main-row-name ${shouldHighlight ? 'task-name-red' : ''}" rowspan="2">${task.name}</td>
+                    <td class="column-start-time">${formatDateTime(task.startTime)}</td>
+                    <td class="column-end-time">${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
                     <td class="${shouldHighlight ? 'duration-red' : ''}">${duration}</td>
-                    <td class="${reviveCellClass} ${task.faults.revive >= 2 ? 'red' : ''}">
+                    <td class="column-revive ${reviveCellClass} ${task.faults.revive >= 2 ? 'red' : ''}">
                         ${reviveDisplay}
                         ${revivePopupHTML}
                     </td>
-                    <td class="${task.faults.retry >= 2 ? 'red' : ''}">${task.faults.retry == 0 ? '' : task.faults.retry}</td>
-                    <td class="${cellClass} ${task.faults.retryDetail >= 2 ? '' : ''}">
+                    <td class="column-retry ${task.faults.retry >= 2 ? 'red' : ''}">${task.faults.retry == 0 ? '' : task.faults.retry}</td>
+                    <td class="column-retry-detail ${cellClass} ${task.faults.retryDetail >= 2 ? '' : ''}">
                         ${task.faults.retryDetail == 0 ? '' : task.faults.retryDetail}
                         ${coordPopupHTML}
                     </td>
-                    <td class="${task.faults.too_far_skip >= 2 ? 'red' : 'red'}">${task.faults.too_far_skip == 0 ? '' : task.faults.too_far_skip}</td>
-                    <td class="${timeoutCellClass} ${task.faults.timeout >= 1 ? 'red' : ''}">
+                    <td class="column-too-far-skip ${task.faults.too_far_skip >= 2 ? 'red' : 'red'}">${task.faults.too_far_skip == 0 ? '' : task.faults.too_far_skip}</td>
+                    <td class="column-timeout ${timeoutCellClass} ${task.faults.timeout >= 1 ? 'red' : ''}">
                         ${task.faults.timeout == 0 ? '' : task.faults.timeout}
                         ${timeoutPopupHTML}
                     </td>
-                    <td class="${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
-                    <td>${picksText}</td>
+                    <td class="column-teleport ${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
+                </tr>
+                <tr class="sub-row">
+                    <td colspan="9"><span class="picks-bold">拾取物: </span>${picksText}</td>
                 </tr>`;
                 });
 
                 html += `
-            <tr>
-                <td colspan="11">
-                    <strong>拾取物总计：</strong>
-                    ${formatPicks(group.picks)}
-                </td>
-            </tr>
-            </table>
-            </div>
-            </div>`;
+                <tr class="ignore-sort">
+                    <td colspan="10"><span class="picks-bold">所有拾取物: </span>${formatPicks(group.picks)}</td>
+                </tr>
+                </tbody></table>
+                </div>
+                </div>
+                </div>`;
             });
 
             html += '</div>';
@@ -1473,10 +1850,115 @@
                 .map(([item, count]) => `${item} (${count})`)
                 .join(', ');
         }
+
+        // 新增：更新时间列的显示状态
+        function updateTimeColumnsVisibility() {
+            if (timeColumnsVisible) {
+                document.body.classList.remove('time-columns-hidden');
+            } else {
+                document.body.classList.add('time-columns-hidden');
+            }
+        }
+
+        // 新增：显示时间列状态提示
+        function showTimeToggleIndicator() {
+            const indicator = document.getElementById('timeToggleIndicator');
+            indicator.textContent = `时间列: ${timeColumnsVisible ? '显示' : '隐藏'}`;
+            indicator.classList.add('visible');
+
+            // 2秒后隐藏提示
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
+        }
+
+        // 新增：更新统计列的显示状态
+        function updateStatsColumnsVisibility() {
+            if (statsColumnsVisible) {
+                document.body.classList.remove('stats-columns-hidden');
+            } else {
+                document.body.classList.add('stats-columns-hidden');
+            }
+        }
+
+        // 新增：显示统计列状态提示
+        function showStatsToggleIndicator() {
+            const indicator = document.getElementById('statsToggleIndicator');
+            indicator.textContent = `统计列: ${statsColumnsVisible ? '显示' : '隐藏'}`;
+            indicator.classList.add('visible');
+
+            // 2秒后隐藏提示
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
+        }
+
+        // 新增：更新表格格式
+        function updateTableFormat() {
+            if (useLegacyFormat) {
+                document.body.classList.add('legacy-format');
+            } else {
+                document.body.classList.remove('legacy-format');
+            }
+        }
+
+        // 新增：显示表格格式状态提示
+        function showFormatToggleIndicator() {
+            const indicator = document.getElementById('formatToggleIndicator');
+            indicator.textContent = `表格格式: ${useLegacyFormat ? '旧版' : '新版'}`;
+            indicator.classList.add('visible');
+
+            // 2秒后隐藏提示
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
+        }
+
+        // 新增：重新生成HTML
+        function refreshHTML() {
+            const result = parsingContext.allGroups;
+            dropZone.innerHTML = generateHTML(result);
+            setupCoordPopups();
+            document.querySelectorAll('.group-header').forEach((el, i) => {
+                el.onclick = () => {
+                    el.classList.toggle('collapsed');
+                    document.getElementById(`group-${i}`).classList.toggle('collapsed');
+                };
+            });
+
+            // 应用当前显示状态
+            updateTimeColumnsVisibility();
+            updateStatsColumnsVisibility();
+            updateTableFormat();
+        }
+
         // 監聽鍵盤按下
         document.onkeydown = function (e) {
             var keyNum = e;       // // 使用事件对象而不是 window.event
-            if (keyNum.keyCode == 55) {
+
+            if (keyNum.keyCode == 192 && keyNum.altKey) {
+                // alt + ~
+                window.location = '../小玩意/燈泡字/index.html';
+            } else if (keyNum.keyCode == 49 && keyNum.altKey) {
+                // alt + 1
+                window.location = '../time/index.html';
+            } else if (keyNum.keyCode == 50 && keyNum.altKey) {
+                // alt + 2
+                window.location = '../showText/index.html';
+            } else if (keyNum.keyCode == 51 && keyNum.altKey) {
+                // alt + 3
+                window.location = '../seeImg/index.html';
+            } else if (keyNum.keyCode == 52 && keyNum.altKey) {
+                // alt + 4
+                window.location = '../move/index.html';
+            } else if (keyNum.keyCode == 57 && keyNum.altKey) {
+                // alt + 9
+                // 切換日志
+                window.location = '../r_log/index_+-.html';
+            } else if (keyNum.keyCode == 48 && keyNum.altKey) {
+                // alt + 0
+                window.location = '../Niframe/index.html'
+            } else if (keyNum.keyCode == 55) {
                 // 7 計算原神下次40體時間
                 // 呼叫視窗、要求現在體力
                 var ps = prompt("輸入現在_原神_體力", "");
@@ -1501,11 +1983,12 @@
             } else if (keyNum.keyCode == 57) {
                 // 9 計算任務距離時間
                 handleDateComparison();
-            } else if (keyNum.keyCode == 96 || keyNum.keyCode == 48) {
+            } else if (keyNum.keyCode == 96) {
                 // 右0 幫助
                 var help_text = "";
-                help_text += "~   切換淺色模式,深色模式\n"
-                help_text += "Alt+f 进入或退出全屏模式\n"
+                help_text += "T   切换时间列显示/隐藏\n";
+                help_text += "Y   切换统计列显示/隐藏\n";
+                help_text += "U   切换表格格式（新版/旧版）\n";
                 help_text += "9   計算BGI日志格式 與現在距離 時間\n"
                 help_text += "右2 計算BGI日志格式 +3天\n"
                 help_text += "右3 計算BGI日志格式 運行時間\n"
@@ -1576,6 +2059,21 @@
                 if (window.resetCoordPopups) {
                     window.resetCoordPopups();
                 }
+                e.preventDefault(); // 阻止默认行为
+            } else if (keyNum.keyCode == 84) { // T键 - 切换时间列显示
+                timeColumnsVisible = !timeColumnsVisible;
+                updateTimeColumnsVisibility();
+                showTimeToggleIndicator();
+                e.preventDefault(); // 阻止默认行为
+            } else if (keyNum.keyCode == 89) { // Y键 - 切换统计列显示
+                statsColumnsVisible = !statsColumnsVisible;
+                updateStatsColumnsVisibility();
+                showStatsToggleIndicator();
+                e.preventDefault(); // 阻止默认行为
+            } else if (keyNum.keyCode == 85) { // U键 - 切换表格格式
+                useLegacyFormat = !useLegacyFormat;
+                refreshHTML();
+                showFormatToggleIndicator();
                 e.preventDefault(); // 阻止默认行为
             }
         }
