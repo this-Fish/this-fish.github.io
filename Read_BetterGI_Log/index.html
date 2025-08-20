@@ -1,4 +1,5 @@
 <!-- 
+    適用於BetterGI 0.48.0
     20250820新增了看死亡前最近的XY軸 
     20250821
         修正當有卡死與复活同時存在次數時，复活顯示不出XY軸 
@@ -2067,8 +2068,8 @@
             } else if (keyNum.keyCode == 57) {
                 // 9 計算任務距離時間
                 handleDateComparison();
-            } else if (keyNum.keyCode == 96) {
-                // 右0 幫助
+            } else if (keyNum.keyCode == 96 || keyNum.keyCode == 48) {
+                // 左0or右0 幫助
                 var help_text = "";
                 help_text += "Better Genshin Impact 日志分析工具 - 简易说明\n\n";
                 help_text += "主要交互:\n";
