@@ -1936,29 +1936,7 @@
         document.onkeydown = function (e) {
             var keyNum = e;       // // 使用事件对象而不是 window.event
 
-            if (keyNum.keyCode == 192 && keyNum.altKey) {
-                // alt + ~
-                window.location = '../小玩意/燈泡字/index.html';
-            } else if (keyNum.keyCode == 49 && keyNum.altKey) {
-                // alt + 1
-                window.location = '../time/index.html';
-            } else if (keyNum.keyCode == 50 && keyNum.altKey) {
-                // alt + 2
-                window.location = '../showText/index.html';
-            } else if (keyNum.keyCode == 51 && keyNum.altKey) {
-                // alt + 3
-                window.location = '../seeImg/index.html';
-            } else if (keyNum.keyCode == 52 && keyNum.altKey) {
-                // alt + 4
-                window.location = '../move/index.html';
-            } else if (keyNum.keyCode == 57 && keyNum.altKey) {
-                // alt + 9
-                // 切換日志
-                window.location = '../r_log/index_+-.html';
-            } else if (keyNum.keyCode == 48 && keyNum.altKey) {
-                // alt + 0
-                window.location = '../Niframe/index.html'
-            } else if (keyNum.keyCode == 55) {
+             if (keyNum.keyCode == 55) {
                 // 7 計算原神下次40體時間
                 // 呼叫視窗、要求現在體力
                 var ps = prompt("輸入現在_原神_體力", "");
