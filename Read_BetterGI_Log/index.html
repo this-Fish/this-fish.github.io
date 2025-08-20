@@ -3,9 +3,10 @@
     20250821
         修正當有卡死與复活同時存在次數時，复活顯示不出XY軸 
         新增
+            新增行高亮、鼠標移到表格行時高亮、提示當前在看哪一行
             按T鍵隱藏或顯示 开始时间&结束时间
             按Y鍵隱藏或顯示 复活次数、重试次数、疑似卡死次数、过远跳过、战斗超时、传送失败
-            按U鍵切換表格格式（新版/舊版）
+            按U鍵切換表格格式（旧版/新版）
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -502,7 +503,7 @@
             font-weight: normal;
         }
 
-        /* 暗色主题下的旧版表格样式 */
+        /* 暗色主题下的新版表格样式 */
         body.dark-theme .legacy-format .main-row-name {
             background-color: #2a2a2a;
         }
@@ -535,6 +536,47 @@
         .picks-bold {
             font-weight: bold;
         }
+
+        /* 行高亮样式 */
+        tr.highlighted {
+            background-color: #e6f7ff !important;
+            /* 白色模式下的淡蓝色 */
+        }
+
+        body.dark-theme tr.highlighted {
+            background-color: #3a3a3a !important;
+            /* 黑色模式下的中灰色 */
+        }
+
+        /* 新增：帮助提示样式 */
+        .help-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .help-indicator.visible {
+            opacity: 1;
+        }
+
+        /* 默认亮色主题下的帮助提示样式 */
+        .help-indicator {
+            background-color: #000;
+            color: #fff;
+        }
+
+        /* 暗色主题下的帮助提示样式 */
+        body.dark-theme .help-indicator {
+            background-color: #fff;
+            color: #000;
+        }
     </style>
 </head>
 
@@ -549,6 +591,8 @@
     <div class="stats-toggle-indicator" id="statsToggleIndicator"></div>
     <!-- 新增：表格格式显示状态指示器 -->
     <div class="stats-toggle-indicator" id="formatToggleIndicator" style="bottom: 110px;"></div>
+    <!-- 新增：帮助提示指示器 -->
+    <div class="help-indicator" id="helpIndicator">按 0 键查看说明</div>
 
     <script>
         // 全局变量
@@ -556,6 +600,7 @@
         let timeColumnsVisible = true; // 跟踪时间列的显示状态
         let statsColumnsVisible = true; // 跟踪统计列的显示状态
         let useLegacyFormat = false; // 跟踪表格格式状态
+        let hasLogData = false; // 跟踪是否有日志数据
 
         // 在文件解析前重置时间戳追踪
         function resetTimeTracker() {
@@ -567,14 +612,23 @@
             allGroups: []
         };
 
-        // 页面加载时检查时间并设置暗色主题
+        // 页面加载时显示帮助提示
         window.onload = function () {
             const now = new Date();
             const currentHour = now.getHours();
-            const minutes = now.getMinutes(); // 分钟
+            const minutes = now.getMinutes();
             if ((currentHour < 6) || (currentHour === 6 && minutes <= 30)) {
                 document.body.classList.add('dark-theme');
             }
+
+            // 显示帮助提示
+            const helpIndicator = document.getElementById('helpIndicator');
+            helpIndicator.classList.add('visible');
+
+            // 5秒后隐藏帮助提示
+            setTimeout(() => {
+                helpIndicator.classList.remove('visible');
+            }, 5000);
         };
 
         // 拖放事件处理
@@ -629,6 +683,12 @@
                 updateStatsColumnsVisibility();
                 // 应用初始表格格式
                 updateTableFormat();
+
+                // 设置行高亮效果
+                setupRowHighlight();
+
+                // 标记已有日志数据
+                hasLogData = true;
             } catch (e) {
                 dropZone.innerHTML = `<div class="error">解析失败：${e.message}</div>`;
             }
@@ -1006,7 +1066,7 @@
                     file, // 保留原始File对象
                     date: parseDateFromFileName(file.name)
                 }))
-                .sort((a, b) => a.date - b.date) // 按日期从旧到新排序
+                .sort((a, b) => a.date - b.date) // 按日期从新到新排序
                 .map(entry => ({
                     file: entry.file, // 直接传递File对象
                     date: entry.date
@@ -1381,7 +1441,7 @@
             }
         }
 
-        // 新版格式HTML生成
+        // 旧版格式HTML生成
         function generateNewFormatHTML(groups) {
             let html = '<div style="width: 100%;">';
 
@@ -1545,7 +1605,7 @@
 
                     // 3. 脚本未正常走完
                     if (task.abnormalEnd) {
-                        alerts.push('<span class="abnormal-alert">追踪脚本未正常走完！</span>');
+                        alerts.push('<span class="abnormal-alert">脚本未正常走完</span>');
                     }
 
                     // 如果有提示，添加到拾取物文本
@@ -1598,7 +1658,7 @@
             return html;
         }
 
-        // 旧版格式HTML生成
+        // 新版格式HTML生成
         function generateLegacyFormatHTML(groups) {
             let html = '<div class="legacy-format" style="width: 100%;">';
 
@@ -1628,7 +1688,7 @@
                     </thead>
                     <tbody>`;
 
-                group.tasks.forEach(task => {
+                group.tasks.forEach((task, taskIndex) => {
                     const hasCoords = task.faults.coords && task.faults.coords.length > 0;
 
                     // 生成复活事件弹窗
@@ -1775,7 +1835,7 @@
                     }
 
                     html += `
-                <tr>
+                <tr data-task-id="group-${index}-task-${taskIndex}">
                     <td class="main-row-name ${shouldHighlight ? 'task-name-red' : ''}" rowspan="2">${task.name}</td>
                     <td class="column-start-time">${formatDateTime(task.startTime)}</td>
                     <td class="column-end-time">${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
@@ -1796,7 +1856,7 @@
                     </td>
                     <td class="column-teleport ${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
                 </tr>
-                <tr class="sub-row">
+                <tr class="sub-row" data-task-id="group-${index}-task-${taskIndex}">
                     <td colspan="9"><span class="picks-bold">拾取物: </span>${picksText}</td>
                 </tr>`;
                 });
@@ -1905,7 +1965,7 @@
         // 新增：显示表格格式状态提示
         function showFormatToggleIndicator() {
             const indicator = document.getElementById('formatToggleIndicator');
-            indicator.textContent = `表格格式: ${useLegacyFormat ? '旧版' : '新版'}`;
+            indicator.textContent = `表格格式: ${useLegacyFormat ? '新版' : '旧版'}`;
             indicator.classList.add('visible');
 
             // 2秒后隐藏提示
@@ -1930,13 +1990,59 @@
             updateTimeColumnsVisibility();
             updateStatsColumnsVisibility();
             updateTableFormat();
+
+            // 设置行高亮效果
+            setupRowHighlight();
+        }
+
+        // 新增：设置行高亮效果
+        function setupRowHighlight() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                // 旧版表格：单行高亮
+                if (!useLegacyFormat) {
+                    const rows = table.querySelectorAll('tr:not(.sticky-header)');
+                    rows.forEach(row => {
+                        row.addEventListener('mouseenter', () => {
+                            row.classList.add('highlighted');
+                        });
+
+                        row.addEventListener('mouseleave', () => {
+                            row.classList.remove('highlighted');
+                        });
+                    });
+                }
+                // 新版表格：关联行高亮
+                else {
+                    // 为所有行添加事件监听
+                    const rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        row.addEventListener('mouseenter', () => {
+                            const taskId = row.getAttribute('data-task-id');
+                            if (taskId) {
+                                const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                relatedRows.forEach(r => r.classList.add('highlighted'));
+                            }
+                        });
+
+                        row.addEventListener('mouseleave', () => {
+                            const taskId = row.getAttribute('data-task-id');
+                            if (taskId) {
+                                const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                relatedRows.forEach(r => r.classList.remove('highlighted'));
+                            }
+                        });
+                    });
+                }
+            });
         }
 
         // 監聽鍵盤按下
         document.onkeydown = function (e) {
             var keyNum = e;       // // 使用事件对象而不是 window.event
 
-             if (keyNum.keyCode == 55) {
+            if (keyNum.keyCode == 55) {
                 // 7 計算原神下次40體時間
                 // 呼叫視窗、要求現在體力
                 var ps = prompt("輸入現在_原神_體力", "");
@@ -1964,21 +2070,31 @@
             } else if (keyNum.keyCode == 96) {
                 // 右0 幫助
                 var help_text = "";
+                help_text += "Better Genshin Impact 日志分析工具 - 简易说明\n\n";
+                help_text += "主要交互:\n";
+                help_text += "• 鼠标悬停统计数字查看详情\n";
+
+                help_text += "常用快捷键:\n";
                 help_text += "T   切换时间列显示/隐藏\n";
                 help_text += "Y   切换统计列显示/隐藏\n";
-                help_text += "U   切换表格格式（新版/旧版）\n";
-                help_text += "9   計算BGI日志格式 與現在距離 時間\n"
-                help_text += "右2 計算BGI日志格式 +3天\n"
-                help_text += "右3 計算BGI日志格式 運行時間\n"
-                help_text += "右5 計算N天后 日期\n"
-                help_text += "右7 計算原神 下次120體時間\n"
-                help_text += "右8 計算HH-MM后 時間\n"
-                help_text += "右9 計算BGI日志格式 +46小時后時間\n\n"
-                help_text += "鼠标移到\"疑似卡死次数\"、显示卡死点XY轴\n"
-                help_text += "鼠标移到\"复活次数\" 或 \"战斗超时\"、显示复活或超时在第几次戰鬥出現\n"
-                help_text += "R 重置彈窗\n"
-                alert(help_text);
+                help_text += "U   切换表格格式(新旧版)\n";
+                help_text += "~   切换亮色/暗色主题\n";
+                help_text += "R   重置弹窗位置\n\n";
 
+                help_text += "实用计算功能:\n";
+                help_text += "7   计算原神下次40体力时间\n";
+                help_text += "9   计算时间距离现在多久\n";
+                help_text += "右2 计算日期+3天\n";
+                help_text += "右3 计算两个时间点间隔\n";
+                help_text += "右5 计算N天后的日期\n";
+                help_text += "右7 计算原神下次120体力时间\n";
+                help_text += "右8 计算HH.MM后的时间\n";
+                help_text += "右9 计算时间+46小时后\n\n";
+                help_text += "详细说明请复制下方网址查看:\n";
+
+                // 使用prompt并预设网址，方便用户复制
+                prompt(help_text, "https://github.com/this-Fish/this-fish.github.io/tree/main/Read_BetterGI_Log");
+                
             } else if (keyNum.keyCode == 98) {
                 // 計算BGI日志格式 +3天
                 addThreeDaysSimple();
@@ -2023,6 +2139,16 @@
                 return;
             } else if (keyNum.keyCode == 192) {
                 document.body.classList.toggle('dark-theme'); // 切换暗色主题
+
+                // 更新帮助提示的样式
+                const helpIndicator = document.getElementById('helpIndicator');
+                if (document.body.classList.contains('dark-theme')) {
+                    helpIndicator.style.backgroundColor = '#fff';
+                    helpIndicator.style.color = '#000';
+                } else {
+                    helpIndicator.style.backgroundColor = '#000';
+                    helpIndicator.style.color = '#fff';
+                }
             } else if (keyNum.keyCode == 87) {
                 // W 畫面向上移
                 dropZone.scrollBy(0, -150);
@@ -2049,6 +2175,11 @@
                 showStatsToggleIndicator();
                 e.preventDefault(); // 阻止默认行为
             } else if (keyNum.keyCode == 85) { // U键 - 切换表格格式
+                // 检查是否有日志数据
+                if (!hasLogData) {
+                    e.preventDefault();
+                    return;
+                }
                 useLegacyFormat = !useLegacyFormat;
                 refreshHTML();
                 showFormatToggleIndicator();
@@ -2073,7 +2204,7 @@
                 throw new Error('所有參數必須是數字類型');
             }
 
-            // 如現時體力超過目標，減去現時體力、計算下次目標體力
+            // 如現時體力超過目標，減過現時體力、計算下次目標體力
             if (currentStamina >= targetStamina) {
                 currentStamina = currentStamina - targetStamina;
                 targetStamina = targetStamina + targetStamina;
