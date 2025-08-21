@@ -8,6 +8,7 @@
             按T鍵隱藏或顯示 开始时间&结束时间
             按Y鍵隱藏或顯示 复活次数、重试次数、疑似卡死次数、过远跳过、战斗超时、传送失败
             按U鍵切換表格格式（旧版/新版）
+            按I鍵隱藏或顯示 拾取物列 
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -578,6 +579,16 @@
             background-color: #fff;
             color: #000;
         }
+
+        /* 新增：拾取物列隐藏状态样式 */
+        .picks-columns-hidden .column-picks {
+            display: none;
+        }
+
+        /* 调整指示器位置 */
+        .stats-toggle-indicator#picksToggleIndicator {
+            bottom: 60px;
+        }
     </style>
 </head>
 
@@ -592,6 +603,8 @@
     <div class="stats-toggle-indicator" id="statsToggleIndicator"></div>
     <!-- 新增：表格格式显示状态指示器 -->
     <div class="stats-toggle-indicator" id="formatToggleIndicator" style="bottom: 110px;"></div>
+    <!-- 在HTML中添加拾取物列显示状态指示器 -->
+    <div class="stats-toggle-indicator" id="picksToggleIndicator" style="bottom: 60px;"></div>
     <!-- 新增：帮助提示指示器 -->
     <div class="help-indicator" id="helpIndicator">按 0 键查看说明</div>
 
@@ -601,6 +614,7 @@
         let timeColumnsVisible = true; // 跟踪时间列的显示状态
         let statsColumnsVisible = true; // 跟踪统计列的显示状态
         let useLegacyFormat = false; // 跟踪表格格式状态
+        let picksColumnsVisible = true; // 跟踪拾取物列的显示状态
         let hasLogData = false; // 跟踪是否有日志数据
 
         // 在文件解析前重置时间戳追踪
@@ -1466,7 +1480,7 @@
                     <th class="column-too-far-skip">过远跳过</th>
                     <th class="column-timeout">战斗超时</th>
                     <th class="column-teleport">传送失败</th>
-                    <th>拾取物</th>
+                    <th class="column-picks">拾取物</th>
                 </tr>`;
 
                 group.tasks.forEach(task => {
@@ -1639,13 +1653,13 @@
                         ${timeoutPopupHTML}
                     </td>
                     <td class="column-teleport ${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
-                    <td>${picksText}</td>
+                    <td class="column-picks">${picksText}</td>
                 </tr>`;
                 });
 
                 html += `
             <tr>
-                <td colspan="11">
+                <td colspan="11" class="column-picks">
                     <strong>拾取物总计：</strong>
                     ${formatPicks(group.picks)}
                 </td>
@@ -1858,13 +1872,13 @@
                     <td class="column-teleport ${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
                 </tr>
                 <tr class="sub-row" data-task-id="group-${index}-task-${taskIndex}">
-                    <td colspan="9"><span class="picks-bold">拾取物: </span>${picksText}</td>
+                    <td colspan="9" class="column-picks"><span class="picks-bold">拾取物: </span>${picksText}</td>
                 </tr>`;
                 });
 
                 html += `
                 <tr class="ignore-sort">
-                    <td colspan="10"><span class="picks-bold">所有拾取物: </span>${formatPicks(group.picks)}</td>
+                    <td colspan="10" class="column-picks"><span class="picks-bold">所有拾取物: </span>${formatPicks(group.picks)}</td>
                 </tr>
                 </tbody></table>
                 </div>
@@ -1954,6 +1968,27 @@
             }, 2000);
         }
 
+        // 添加拾取物列显示状态更新函数
+        function updatePicksColumnsVisibility() {
+            if (picksColumnsVisible) {
+                document.body.classList.remove('picks-columns-hidden');
+            } else {
+                document.body.classList.add('picks-columns-hidden');
+            }
+        }
+
+        // 添加拾取物列状态提示函数
+        function showPicksToggleIndicator() {
+            const indicator = document.getElementById('picksToggleIndicator');
+            indicator.textContent = `拾取物列: ${picksColumnsVisible ? '显示' : '隐藏'}`;
+            indicator.classList.add('visible');
+
+            // 2秒后隐藏提示
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
+        }
+
         // 新增：更新表格格式
         function updateTableFormat() {
             if (useLegacyFormat) {
@@ -1990,6 +2025,7 @@
             // 应用当前显示状态
             updateTimeColumnsVisibility();
             updateStatsColumnsVisibility();
+            updatePicksColumnsVisibility(); // 新增：应用拾取物列显示状态
             updateTableFormat();
 
             // 设置行高亮效果
@@ -2079,6 +2115,7 @@
                 help_text += "T   切换时间列显示/隐藏\n";
                 help_text += "Y   切换统计列显示/隐藏\n";
                 help_text += "U   切换表格格式(新旧版)\n";
+                help_text += "I   切换拾取物列显示/隐藏\n"; // 新增
                 help_text += "~   切换亮色/暗色主题\n";
                 help_text += "R   重置弹窗位置\n\n";
 
@@ -2095,7 +2132,7 @@
 
                 // 使用prompt并预设网址，方便用户复制
                 prompt(help_text, "https://github.com/this-Fish/this-fish.github.io/tree/main/Read_BetterGI_Log");
-                
+
             } else if (keyNum.keyCode == 98) {
                 // 計算BGI日志格式 +3天
                 addThreeDaysSimple();
@@ -2181,10 +2218,23 @@
                     e.preventDefault();
                     return;
                 }
+                
+                // 切换格式前重置所有列为显示状态
+                // timeColumnsVisible = true;
+                // statsColumnsVisible = true;
+                // picksColumnsVisible = true;
+
                 useLegacyFormat = !useLegacyFormat;
                 refreshHTML();
                 showFormatToggleIndicator();
                 e.preventDefault(); // 阻止默认行为
+            } else if (keyNum.keyCode == 73) { // I键 - 切换拾取物列显示（仅旧版格式）
+                // if (!useLegacyFormat) {
+                    picksColumnsVisible = !picksColumnsVisible;
+                    updatePicksColumnsVisibility();
+                    showPicksToggleIndicator();
+                    e.preventDefault(); // 阻止默认行为
+                // }
             }
         }
 
