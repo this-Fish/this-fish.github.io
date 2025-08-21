@@ -13,6 +13,7 @@
             按P進入導出模式，顯示战斗超时/疑似卡死次数/复活次数小視窗詳細、方便分享
                 導出模式中再次按P退出導出模式
             手機版可选择日志文件上傳
+            当按下J键时，所有统计列（复活次数、重试次数、疑似卡死、过远跳过、战斗超时、传送失败）都为0或空的任务行会被隐藏或显示，方便用户专注于有问题的任务。
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -808,6 +809,11 @@
         #fileUploadContainer {
             display: none;
         }
+
+        /* 添加零统计任务显示状态指示器样式 */
+        .stats-toggle-indicator#zeroStatsToggleIndicator {
+            bottom: 160px;
+        }
     </style>
 </head>
 
@@ -842,6 +848,8 @@
     <div class="stats-toggle-indicator" id="formatToggleIndicator" style="bottom: 110px;"></div>
     <!-- 在HTML中添加拾取物列显示状态指示器 -->
     <div class="stats-toggle-indicator" id="picksToggleIndicator" style="bottom: 60px;"></div>
+    <!-- 在HTML中添加零统计任务显示状态指示器 -->
+    <div class="stats-toggle-indicator" id="zeroStatsToggleIndicator" style="bottom: 160px;"></div>
     <!-- 新增：帮助提示指示器 -->
     <div class="help-indicator" id="helpIndicator">按 0 键查看说明</div>
 
@@ -853,6 +861,7 @@
         let useLegacyFormat = false; // 跟踪表格格式状态
         let picksColumnsVisible = true; // 跟踪拾取物列的显示状态
         let hasLogData = false; // 跟踪是否有日志数据
+        let hideZeroStatsTasks = false; // 跟踪是否隐藏所有统计为0的任务
         let isStaticMode = false;
 
         // 自定义确认对话框
@@ -2503,6 +2512,9 @@
 
             // 设置行高亮效果
             setupRowHighlight();
+
+            // 应用零统计任务显示状态
+            toggleZeroStatsTasks();
         }
 
         // 新增：设置行高亮效果
@@ -2580,16 +2592,16 @@
             } else if (keyNum.keyCode == 96 || keyNum.keyCode == 48) {
                 // 左0or右0 幫助
                 var help_text = "";
-                help_text += "Better Genshin Impact 日志分析工具 - 简易说明\n\n";
-                help_text += "主要交互:\n";
+                help_text += "Better Genshin Impact 日志分析工具 - 简易说明\n";
                 help_text += "• 鼠标悬停统计数字查看详情\n\n";
 
                 help_text += "常用快捷键:\n";
                 help_text += "T   切换时间列显示/隐藏\n";
                 help_text += "Y   切换统计列显示/隐藏\n";
                 help_text += "U   切换表格格式(新旧版)\n";
-                help_text += "I   切换拾取物列显示/隐藏\n"; // 新增
-                help_text += "P   切换導出模式\n"; // 新增
+                help_text += "I   切换拾取物列显示/隐藏\n";
+                help_text += "J   隐藏/显示所有统计为0的任务\n";
+                help_text += "P   进入/退出导出模式\n";
                 help_text += "~   切换亮色/暗色主题\n";
                 help_text += "R   重置弹窗位置\n\n";
 
@@ -2602,7 +2614,7 @@
                 help_text += "右7 计算原神下次120体力时间\n";
                 help_text += "右8 计算HH.MM后的时间\n";
                 help_text += "右9 计算时间+46小时后\n\n";
-                help_text += "详细说明请复制下方网址查看:\n";
+                help_text += "详细说明请复制下方网址查看:";
 
                 // 使用prompt并预设网址，方便用户复制
                 prompt(help_text, "https://github.com/this-Fish/this-fish.github.io/tree/main/Read_BetterGI_Log");
@@ -2709,6 +2721,11 @@
                 showPicksToggleIndicator();
                 e.preventDefault(); // 阻止默认行为
                 // }
+            } else if (keyNum.keyCode == 74) { // J键 - 隐藏/显示所有统计为0的任务
+                hideZeroStatsTasks = !hideZeroStatsTasks;
+                toggleZeroStatsTasks();
+                showZeroStatsToggleIndicator();
+                e.preventDefault(); // 阻止默认行为
             } else if (keyNum.keyCode === 80 || keyNum.key === 'p' || keyNum.key === 'P') {
                 // 阻止默认行为，避免可能冲突
                 e.preventDefault();
@@ -2716,6 +2733,67 @@
                 // 处理P键功能
                 handlePKey();
             }
+        }
+
+        // 添加显示状态提示函数
+        function showZeroStatsToggleIndicator() {
+            const indicator = document.getElementById('zeroStatsToggleIndicator');
+            indicator.textContent = `零统计任务: ${hideZeroStatsTasks ? '隐藏' : '显示'}`;
+            indicator.classList.add('visible');
+
+            // 2秒后隐藏提示
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
+        }
+
+        // 添加切换零统计任务显示状态的函数
+        function toggleZeroStatsTasks() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const rows = table.querySelectorAll('tr');
+
+                rows.forEach(row => {
+                    // 跳过表头行
+                    if (row.querySelector('th')) return;
+
+                    // 获取统计单元格
+                    const reviveCell = row.querySelector('.column-revive');
+                    const retryCell = row.querySelector('.column-retry');
+                    const retryDetailCell = row.querySelector('.column-retry-detail');
+                    const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                    const timeoutCell = row.querySelector('.column-timeout');
+                    const teleportCell = row.querySelector('.column-teleport');
+
+                    if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                        // 检查所有统计值是否都为0或空
+                        const isAllZero =
+                            (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                            (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                            (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                            (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                            (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                            (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                        // 根据设置显示或隐藏行
+                        if (isAllZero) {
+                            row.style.display = hideZeroStatsTasks ? 'none' : '';
+
+                            // 对于旧版格式，还需要处理关联的拾取物行
+                            if (useLegacyFormat) {
+                                const taskId = row.getAttribute('data-task-id');
+                                if (taskId) {
+                                    const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                    relatedRows.forEach(r => {
+                                        r.style.display = hideZeroStatsTasks ? 'none' : '';
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+            });
         }
 
         /**
