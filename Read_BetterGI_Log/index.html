@@ -8,7 +8,11 @@
             按T鍵隱藏或顯示 开始时间&结束时间
             按Y鍵隱藏或顯示 复活次数、重试次数、疑似卡死次数、过远跳过、战斗超时、传送失败
             按U鍵切換表格格式（旧版/新版）
-            按I鍵隱藏或顯示 拾取物列 
+            按I鍵隱藏或顯示 拾取物列
+            雙擊顯示數字的复战斗超时/疑似卡死次数/复活次数格時、重置該格生成的小視窗位置
+            按P進入導出模式，顯示战斗超时/疑似卡死次数/复活次数小視窗詳細、方便分享
+                導出模式中再次按P退出導出模式
+            手機版可选择日志文件上傳
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -589,12 +593,245 @@
         .stats-toggle-indicator#picksToggleIndicator {
             bottom: 60px;
         }
+
+        /* 新增导出相关样式 */
+        .mode-indicator {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 10000;
+            display: none;
+        }
+
+        .static-mode .mode-indicator {
+            display: block;
+            background-color: rgba(76, 175, 80, 0.8);
+        }
+
+        /* 静态模式下弹窗的样式 */
+        .static-mode .coord-popup,
+        .static-mode .battle-popup {
+            display: block !important;
+            position: static !important;
+            margin: 10px 0;
+            box-shadow: none;
+            max-width: 100%;
+            max-height: none;
+        }
+
+        .static-mode .coord-popup-header,
+        .static-mode .battle-popup-header {
+            cursor: default;
+            background-color: #e0e0e0;
+            /* color: #333; */
+        }
+
+        .static-mode .close-btn {
+            display: none;
+        }
+
+        .static-mode .coords-cell,
+        .static-mode .has-battle-events {
+            cursor: default;
+        }
+
+        .static-mode .coords-cell.pinned::after,
+        .static-mode .has-battle-events.pinned::after {
+            content: "";
+        }
+
+        /* 提示框样式 */
+        .custom-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            min-width: 300px;
+            text-align: center;
+            display: none;
+        }
+
+        .custom-alert h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .custom-alert-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .custom-alert-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .custom-alert-confirm {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .custom-alert-cancel {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+        }
+
+        body.dark-theme .custom-alert {
+            background-color: #333;
+            color: #fff;
+        }
+
+        body.dark-theme .custom-alert h3 {
+            color: #fff;
+        }
+
+        /* 新增移动设备上传按钮样式 */
+        #fileUploadContainer {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        #fileUploadBtn {
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        #fileUploadBtn:hover {
+            background-color: #45a049;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* 暗色主题适配 */
+        body.dark-theme #fileUploadContainer {
+            background-color: #2a2a2a;
+            border-color: #555;
+        }
+
+        /* 新增移动设备样式 */
+        @media (max-width: 768px),
+        (pointer: coarse) {
+            body {
+                text-size-adjust: none;
+                -webkit-text-size-adjust: none;
+            }
+
+            .task-name-red,
+            .main-row-name,
+            .group-header h2 {
+                font-size: 16px;
+                line-height: 1.4;
+                text-size-adjust: none;
+                -webkit-text-size-adjust: none;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            th,
+            td {
+                padding: 6px 4px;
+            }
+
+            /* 移动设备上传按钮样式 */
+            #fileUploadContainer {
+                display: block;
+                text-align: center;
+                margin: 15px;
+                padding: 15px;
+                border: 2px dashed #ccc;
+                border-radius: 8px;
+                background-color: #f9f9f9;
+            }
+
+            #fileUploadBtn {
+                padding: 12px 24px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background-color 0.3s;
+            }
+
+            #fileUploadBtn:hover {
+                background-color: #45a049;
+            }
+
+            #fileInput {
+                display: none;
+            }
+        }
+
+        /* 非移动设备默认隐藏上传区域 */
+        #fileUploadContainer {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
+    <div class="mode-indicator">静态模式 - 请使用浏览器"另存新档"功能保存页面</div>
+
     <div id="container">
         <div id="dropZone" class="empty">将日志文件拖放到此处</div>
+        <!-- 新增移动设备上传区域 -->
+        <div id="fileUploadContainer">
+            <input type="file" id="fileInput" accept=".log,.txt" multiple>
+            <button id="fileUploadBtn">选择日志文件</button>
+        </div>
+    </div>
+
+    <!-- 自定义提示框 -->
+    <div class="overlay" id="alertOverlay"></div>
+    <div class="custom-alert" id="customAlert">
+        <h3 id="alertTitle">确认操作</h3>
+        <p id="alertMessage">您确定要执行此操作吗？</p>
+        <div class="custom-alert-buttons">
+            <button class="custom-alert-btn custom-alert-confirm" id="alertConfirm">确定</button>
+            <button class="custom-alert-btn custom-alert-cancel" id="alertCancel">取消</button>
+        </div>
     </div>
 
     <!-- 新增：时间列显示状态指示器 -->
@@ -616,6 +853,131 @@
         let useLegacyFormat = false; // 跟踪表格格式状态
         let picksColumnsVisible = true; // 跟踪拾取物列的显示状态
         let hasLogData = false; // 跟踪是否有日志数据
+        let isStaticMode = false;
+
+        // 自定义确认对话框
+        function showCustomConfirm(title, message) {
+            return new Promise((resolve) => {
+                const alert = document.getElementById('customAlert');
+                const overlay = document.getElementById('alertOverlay');
+                const titleEl = document.getElementById('alertTitle');
+                const messageEl = document.getElementById('alertMessage');
+                const confirmBtn = document.getElementById('alertConfirm');
+                const cancelBtn = document.getElementById('alertCancel');
+
+                // 设置标题和消息
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+
+                // 显示对话框
+                alert.style.display = 'block';
+                overlay.style.display = 'block';
+
+                // 处理确认按钮点击
+                const onConfirm = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                // 处理取消按钮点击
+                const onCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                // 清理事件监听器
+                const cleanup = () => {
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    overlay.removeEventListener('click', onCancel);
+                    alert.style.display = 'none';
+                    overlay.style.display = 'none';
+                };
+
+                // 添加事件监听器
+                confirmBtn.addEventListener('click', onConfirm);
+                cancelBtn.addEventListener('click', onCancel);
+                overlay.addEventListener('click', onCancel);
+            });
+        }
+
+        // 导出为静态HTML
+        function exportAsStaticHTML() {
+            // 打开所有弹窗并将其内容内联显示
+            document.querySelectorAll('.coord-popup, .battle-popup').forEach(popup => {
+                popup.style.display = 'block';
+                popup.style.position = 'static';
+                popup.style.boxShadow = 'none';
+                popup.style.margin = '10px 0';
+                popup.style.maxWidth = '100%';
+                popup.style.maxHeight = 'none';
+
+                // 移除关闭按钮
+                const closeBtn = popup.querySelector('.close-btn');
+                if (closeBtn) closeBtn.style.display = 'none';
+            });
+
+            // 禁用所有交互元素
+            document.querySelectorAll('.coords-cell, .has-battle-events').forEach(cell => {
+                cell.style.cursor = 'default';
+            });
+
+            // 添加静态模式类
+            document.body.classList.add('static-mode');
+            isStaticMode = true;
+
+            // 显示提示信息
+            alert("页面已转换为静态模式，请使用浏览器的\"另存新档\"功能(Ctrl+S)保存网页。");
+        }
+
+        // 恢复交互模式
+        function restoreInteractiveMode() {
+            // 隐藏所有弹窗
+            document.querySelectorAll('.coord-popup, .battle-popup').forEach(popup => {
+                popup.style.display = '';
+                popup.style.position = '';
+                popup.style.boxShadow = '';
+                popup.style.margin = '';
+                popup.style.maxWidth = '';
+                popup.style.maxHeight = '';
+
+                // 恢复关闭按钮
+                const closeBtn = popup.querySelector('.close-btn');
+                if (closeBtn) closeBtn.style.display = '';
+            });
+
+            // 恢复交互元素
+            document.querySelectorAll('.coords-cell.has-coords, .has-battle-events').forEach(cell => {
+                cell.style.cursor = 'pointer';
+            });
+
+            // 移除静态模式类
+            document.body.classList.remove('static-mode');
+            isStaticMode = false;
+
+            // 重新初始化弹窗
+            if (window.setupCoordPopups) {
+                setupCoordPopups();
+            }
+        }
+
+        // 处理P键按下事件
+        function handlePKey() {
+            if (isStaticMode) {
+                // 静态模式下直接恢复交互模式
+                restoreInteractiveMode();
+            } else {
+                // 交互模式下询问用户是否导出
+                showCustomConfirm(
+                    "导出静态报告",
+                    "是否显示卡死点并转换为静态模式以便导出文件？\n\n转换为静态模式后，请使用浏览器的\"另存为\"功能保存网页。"
+                ).then(confirmed => {
+                    if (confirmed) {
+                        exportAsStaticHTML();
+                    }
+                });
+            }
+        }
 
         // 在文件解析前重置时间戳追踪
         function resetTimeTracker() {
@@ -644,7 +1006,84 @@
             setTimeout(() => {
                 helpIndicator.classList.remove('visible');
             }, 5000);
+
+            // 检测是否为移动设备
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            // 如果是移动设备，添加移动设备类并显示文件上传区域
+            if (isMobileDevice || hasTouchScreen) {
+                document.body.classList.add('mobile-device');
+                document.getElementById('fileUploadContainer').style.display = 'block';
+            }
+
+            // 设置文件上传按钮事件
+            document.getElementById('fileUploadBtn').addEventListener('click', function () {
+                document.getElementById('fileInput').click();
+            });
+
+            // 处理文件选择事件
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
         };
+
+        // 处理文件选择事件
+        async function handleFileSelect(e) {
+            const files = Array.from(e.target.files)
+                .filter(f => f.name.startsWith('better-genshin-impact'))
+                .sort((a, b) => parseDateFromFileName(a.name) - parseDateFromFileName(b.name));
+
+            if (files.length === 0) {
+                alert('请选择BetterGI日志文件（文件名以better-genshin-impact开头）');
+                return;
+            }
+
+            parsingContext.activeGroups.clear();
+            parsingContext.activeTasks.clear();
+            parsingContext.allGroups = [];
+
+            try {
+                resetTimeTracker();
+                document.getElementById('dropZone').innerHTML = '<div class="loading">解析中...</div>';
+                document.getElementById('dropZone').className = 'has-content';
+
+                for (const file of files) {
+                    const content = await readFileAsText(file);
+                    parseLog(content, parseDateFromFileName(file.name));
+                }
+
+                const result = finalizeParsing();
+                document.getElementById('dropZone').innerHTML = generateHTML(result);
+                setupCoordPopups();
+                document.querySelectorAll('.group-header').forEach((el, i) => {
+                    el.onclick = () => {
+                        el.classList.toggle('collapsed');
+                        document.getElementById(`group-${i}`).classList.toggle('collapsed');
+                    };
+                });
+
+                // 应用初始显示状态
+                updateTimeColumnsVisibility();
+                updateStatsColumnsVisibility();
+                updateTableFormat();
+                setupRowHighlight();
+
+                // 标记已有日志数据
+                hasLogData = true;
+            } catch (e) {
+                document.getElementById('dropZone').innerHTML = `<div class="error">解析失败：${e.message}</div>`;
+            }
+        }
+
+        // 读取文件内容为文本
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
 
         // 拖放事件处理
         const dropZone = document.getElementById('dropZone');
@@ -720,6 +1159,10 @@
             let dragElement = null;
             const allPopups = []; // 存储所有弹窗元素
 
+            // 添加双击重置功能
+            let lastClickTime = 0;
+            let clickTimeout = null;
+
             // 定位弹窗函数
             const positionPopup = (popup, cell) => {
                 // 如果已有位置记录，使用记录的位置
@@ -759,6 +1202,21 @@
             coordsCells.forEach(cell => {
                 const popup = cell.querySelector('.coord-popup');
                 if (!popup) return;
+
+                // 双击事件处理
+                cell.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+
+                    // 重置弹窗位置
+                    if (popup) {
+                        // 清除位置记录，强制重新定位到中间
+                        popupPositions.delete(popup);
+                        positionPopup(popup, cell);
+
+                        // 确保弹窗可见
+                        popup.classList.add('visible');
+                    }
+                });
 
                 // 只在有坐标数据时才添加点击事件
                 if (cell.classList.contains('has-coords')) {
@@ -888,6 +1346,21 @@
                 if (!popups || popups.length === 0) return;
 
                 popups.forEach(popup => {
+                    // 双击事件处理
+                    cell.addEventListener('dblclick', (e) => {
+                        e.stopPropagation();
+
+                        // 重置弹窗位置
+                        if (popup) {
+                            // 清除位置记录，强制重新定位到中间
+                            popupPositions.delete(popup);
+                            positionPopup(popup, cell);
+
+                            // 确保弹窗可见
+                            popup.classList.add('visible');
+                        }
+                    });
+
                     // 点击单元格固定/取消固定弹窗
                     cell.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -1470,13 +1943,13 @@
             <div class="collapsible" id="group-${index}">
             <table>
                 <tr>
-                    <th>任务名称</th>
+                    <th data-sort-type="string">任务名称</th>
                     <th class="column-start-time">开始时间</th>
                     <th class="column-end-time">结束时间</th>
-                    <th>耗时</th>
+                    <th data-sort-type="number">耗时</th>
                     <th class="column-revive">复活次数</th>
                     <th class="column-retry">重试次数</th>
-                    <th class="column-retry-detail">疑似卡死次数</th>
+                    <th class="column-retry-detail">疑似卡死</th>
                     <th class="column-too-far-skip">过远跳过</th>
                     <th class="column-timeout">战斗超时</th>
                     <th class="column-teleport">传送失败</th>
@@ -1653,8 +2126,8 @@
                         ${timeoutPopupHTML}
                     </td>
                     <td class="column-teleport ${task.faults.teleport >= 3 ? 'red' : ''}">${task.faults.teleport == 0 ? '' : task.faults.teleport}</td>
-                    <td class="column-picks">${picksText}</td>
-                </tr>`;
+                        <td class="column-picks">${picksText}</td>
+                    </tr>`;
                 });
 
                 html += `
@@ -1780,7 +2253,7 @@
                         hasTimeoutEvents = true;
                         timeoutPopupHTML = '<div class="battle-popup">';
                         timeoutPopupHTML += '<div class="battle-popup-header">';
-                        timeoutPopupHTML += '<div class="battle-popup-title">自动战斗与超时事件</div>';
+                        timeoutPopupHTML += '<div class="battle-popup-title">超时事件详细</div>';
                         timeoutPopupHTML += '<span class="close-btn">×</span>';
                         timeoutPopupHTML += '</div>';
                         timeoutPopupHTML += '<div class="battle-popup-content">';
@@ -2116,6 +2589,7 @@
                 help_text += "Y   切换统计列显示/隐藏\n";
                 help_text += "U   切换表格格式(新旧版)\n";
                 help_text += "I   切换拾取物列显示/隐藏\n"; // 新增
+                help_text += "P   切换導出模式\n"; // 新增
                 help_text += "~   切换亮色/暗色主题\n";
                 help_text += "R   重置弹窗位置\n\n";
 
@@ -2218,7 +2692,7 @@
                     e.preventDefault();
                     return;
                 }
-                
+
                 // 切换格式前重置所有列为显示状态
                 // timeColumnsVisible = true;
                 // statsColumnsVisible = true;
@@ -2230,11 +2704,17 @@
                 e.preventDefault(); // 阻止默认行为
             } else if (keyNum.keyCode == 73) { // I键 - 切换拾取物列显示（仅旧版格式）
                 // if (!useLegacyFormat) {
-                    picksColumnsVisible = !picksColumnsVisible;
-                    updatePicksColumnsVisibility();
-                    showPicksToggleIndicator();
-                    e.preventDefault(); // 阻止默认行为
+                picksColumnsVisible = !picksColumnsVisible;
+                updatePicksColumnsVisibility();
+                showPicksToggleIndicator();
+                e.preventDefault(); // 阻止默认行为
                 // }
+            } else if (keyNum.keyCode === 80 || keyNum.key === 'p' || keyNum.key === 'P') {
+                // 阻止默认行为，避免可能冲突
+                e.preventDefault();
+
+                // 处理P键功能
+                handlePKey();
             }
         }
 
