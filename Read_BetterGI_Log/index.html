@@ -13,7 +13,8 @@
             按P進入導出模式，顯示战斗超时/疑似卡死次数/复活次数小視窗詳細、方便分享
                 導出模式中再次按P退出導出模式
             手機版可选择日志文件上傳
-            当按下J键时，所有统计列（复活次数、重试次数、疑似卡死、过远跳过、战斗超时、传送失败）都为0或空的任务行会被隐藏或显示，方便用户专注于有问题的任务。
+            当按下J键时，所有统计列（复活次数、重试次数、疑似卡死、过远跳过、战斗超时、传送失败）
+                都为0或空的任务行 或 配置組 会被隐藏或显示，方便用户专注于有问题的任务。
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -2505,9 +2506,10 @@
             });
 
             // 应用当前显示状态
+            // 应用当前显示状态
             updateTimeColumnsVisibility();
             updateStatsColumnsVisibility();
-            updatePicksColumnsVisibility(); // 新增：应用拾取物列显示状态
+            updatePicksColumnsVisibility();
             updateTableFormat();
 
             // 设置行高亮效果
@@ -2751,7 +2753,16 @@
         function toggleZeroStatsTasks() {
             const tables = document.querySelectorAll('table');
 
+            // 先显示所有配置组
+            document.querySelectorAll('.group-container').forEach(container => {
+                container.style.display = '';
+            });
+
             tables.forEach(table => {
+
+                const container = table.closest('.group-container');
+                let hasVisibleTask = false; // 标记配置组是否有可见任务
+
                 const rows = table.querySelectorAll('tr');
 
                 rows.forEach(row => {
@@ -2780,6 +2791,8 @@
                         if (isAllZero) {
                             row.style.display = hideZeroStatsTasks ? 'none' : '';
 
+                            row.style.display = hideZeroStatsTasks ? 'none' : '';
+
                             // 对于旧版格式，还需要处理关联的拾取物行
                             if (useLegacyFormat) {
                                 const taskId = row.getAttribute('data-task-id');
@@ -2790,9 +2803,29 @@
                                     });
                                 }
                             }
+                        } else {
+                            // 如果有任何一个统计值不为0，标记配置组有可见任务
+                            hasVisibleTask = true;
+                            row.style.display = '';
+
+                            // 对于旧版格式，确保关联的拾取物行也显示
+                            if (useLegacyFormat) {
+                                const taskId = row.getAttribute('data-task-id');
+                                if (taskId) {
+                                    const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                    relatedRows.forEach(r => {
+                                        r.style.display = '';
+                                    });
+                                }
+                            }
                         }
                     }
                 });
+
+                // 如果配置组没有可见任务且处于隐藏模式，隐藏整个配置组
+                if (hideZeroStatsTasks && !hasVisibleTask) {
+                    container.style.display = 'none';
+                }
             });
         }
 
