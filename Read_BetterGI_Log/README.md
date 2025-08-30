@@ -25,6 +25,12 @@
   - 传送失败次数
 - 拾取物统计
 - 特殊事件标记（派遣任务、暂停、异常结束）
+- 错误和提示信息：
+  - 战斗策略错误
+  - 缺少元素采集角色
+  - 缺少纳西妲角色
+  - 路径文件丢失
+  - 自动吃药
 
 ## 快捷键说明
 
@@ -115,12 +121,22 @@
 - <span style="color: orange; font-weight: bold">橙色文字</span>：派遣任务相关事件
 - <span style="color: rgb(255, 0, 255); font-weight: bold">粉色文字</span>：快捷键暂停事件
 - <span style="color: red; font-weight: bold">红色文字</span>：脚本异常结束警告
+- <span style="color: orange; font-weight: bold">橙色文字</span>：派遣任务相关事件
+- <span style="color: rgb(255, 0, 255); font-weight: bold">粉色文字</span>：快捷键暂停事件
+- <span style="color: red; font-weight: bold">红色文字</span>：脚本异常结束警告
 - <span style="color: red; font-weight: bold">红色任务名/耗时</span>：有重试但无卡死/复活的任务
+- <span style="color: red; font-weight: bold">红色文字</span>：战斗策略错误
+- <span style="color: red; font-weight: bold">红色文字</span>：缺少元素采集角色
+- <span style="color: red; font-weight: bold">红色文字</span>：缺少纳西妲角色
+- <span style="color: red; font-weight: bold">红色文字</span>：路径文件丢失
+- <span style="color: red; font-weight: bold">绿色文字</span>：自动吃药事件
+- <span style="color: red; font-weight: bold">红色任务名/耗时</span>：有重试但无卡死/复活的任务
+
 
 ## 技术细节
 
 ### 支持的日志格式
-- BetterGI 0.48.0 及以上版本
+- BetterGI 0.49.0 及以上版本
 - 自动识别日志中的日期信息
 - 支持多文件按时间顺序合并
 
@@ -129,6 +145,7 @@
 - 跟踪角色坐标变化
 - 统计各类错误事件
 - 记录拾取物品
+- 检测特殊事件和错误信息
 
 ### 浏览器兼容性
 - 支持所有现代浏览器
@@ -151,6 +168,28 @@
 - 分享保存的HTML文件即可
 
 ## 更新日志
+
+### 2025-08-31
+- 增加错误和其他消息检测功能：
+
+  - 战斗策略错误：检测并显示未知的战斗策略方法
+
+  - 缺少元素采集角色：检测并显示缺少特定元素采集角色
+
+  - 缺少纳西妲角色：检测并显示缺少纳西妲角色
+
+  - 路径文件丢失：检测并显示文件找不到错误
+
+  - 自动吃药：检测并显示自动吃药事件
+
+  - 为不同类型的事件设置不同的颜色标识，提高可读性
+
+  - 优化暗色模式下的事件显示效果
+
+### 2025-08-30
+- 捕获坐标信息修改：补充精确接近目标点的坐标捕获
+
+- 修正暗色模式下，只有重试次数有数字时，任务名称不显示红色字体的问题
 
 ### 2025-08-23
 - 导出模式快捷键支持：按P键进入导出模式后，现在支持使用Enter键确认操作，ESC键取消操作
