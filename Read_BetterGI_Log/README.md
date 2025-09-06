@@ -118,19 +118,16 @@
 
 ## 特殊标记说明
 
-- <span style="color: orange; font-weight: bold">橙色文字</span>：派遣任务相关事件
-- <span style="color: rgb(255, 0, 255); font-weight: bold">粉色文字</span>：快捷键暂停事件
-- <span style="color: red; font-weight: bold">红色文字</span>：脚本异常结束警告
-- <span style="color: orange; font-weight: bold">橙色文字</span>：派遣任务相关事件
-- <span style="color: rgb(255, 0, 255); font-weight: bold">粉色文字</span>：快捷键暂停事件
-- <span style="color: red; font-weight: bold">红色文字</span>：脚本异常结束警告
 - <span style="color: red; font-weight: bold">红色任务名/耗时</span>：有重试但无卡死/复活的任务
+- <span style="color: red; font-weight: bold">红色任务名/耗时</span>：有重试但无卡死/复活的任务
+- <span style="color: orange; font-weight: bold">橙色文字</span>：派遣任务相关事件
+- <span style="color: rgb(255, 0, 255); font-weight: bold">粉色文字</span>：快捷键暂停事件
 - <span style="color: red; font-weight: bold">红色文字</span>：战斗策略错误
+- <span style="color: red; font-weight: bold">绿色文字</span>：自动吃药事件
+- <span style="color: red; font-weight: bold">红色文字</span>：路径文件丢失
 - <span style="color: red; font-weight: bold">红色文字</span>：缺少元素采集角色
 - <span style="color: red; font-weight: bold">红色文字</span>：缺少纳西妲角色
-- <span style="color: red; font-weight: bold">红色文字</span>：路径文件丢失
-- <span style="color: red; font-weight: bold">绿色文字</span>：自动吃药事件
-- <span style="color: red; font-weight: bold">红色任务名/耗时</span>：有重试但无卡死/复活的任务
+- <span style="color: red; font-weight: bold">红色文字</span>：脚本异常结束警告
 
 
 ## 技术细节
@@ -169,10 +166,20 @@
 
 ## 更新日志
 
+### 2025-09-06
+- 增加错误和其他消息检测功能：
+
+  - 切换队伍失败：检测并显示用戶切换队伍失败
+  
+### 2025-09-05
+- 增加错误和其他消息检测功能：
+
+  - 未匹配到任何战斗脚本：检测并显示用戶未配置戰鬥腳本
+
 ### 2025-08-31
 - 增加错误和其他消息检测功能：
 
-  - 战斗策略错误：检测并显示未知的战斗策略方法
+  - 地图追踪战斗策略錯誤：检测并显示未知的战斗策略方法
 
   - 缺少元素采集角色：检测并显示缺少特定元素采集角色
 
