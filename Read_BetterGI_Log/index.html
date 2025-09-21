@@ -35,6 +35,13 @@
     200250906
         增加錯誤&其他訊息
             切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！
+    200250921
+        增加錯誤&其他訊息
+            当前获取焦点的窗口不是原神，尝试恢复窗口
+            队伍角色识别失败
+            打开大地图失败
+        多次異常，顯示錯誤次數
+            例如：快捷键暂停 (2)
         -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -1960,7 +1967,7 @@
                             reviveEvents: [], // 新增：复活事件
                             timeoutEvents: [], // 新增：超时事件
                             maxBattleCount: 0, // 记录最大战斗次数
-                            specialAlerts: [] // 新增：特殊事件提示
+                            specialAlerts: new Map() // 修改：使用Map而不是数组，用于计数特殊事件
                         };
                         currentGroup.tasks.push(task);
                         parsingContext.activeTasks.set(task.name, task);
@@ -2036,90 +2043,167 @@
                             currentTask.timeoutEvents.push(battleCount);
                         }
 
-                        // 检测特殊事件
+                        // 特殊事件的处理逻辑，使用计数而不是重复添加
                         // 1. 开始自动领取派遣任务！
                         if (line.includes("开始自动领取派遣任务！")) {
-                            currentTask.specialAlerts.push({
-                                type: 'dispatch-alert',
-                                message: '领取派遣任务'
-                            });
+                            const message = '领取派遣任务';
+                            const type = 'dispatch-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
+
                         // 2. 自动吃药
                         if (line.includes('检测到红血且不在CD，自动吃药')) {
-                            currentTask.specialAlerts.push({
-                                type: 'auto-potion',
-                                message: '自动吃药'
-                            });
+                            const message = '自动吃药';
+                            const type = 'auto-potion';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
                         // 3. 快捷键触发暂停，等待解除
                         if (line.includes("快捷键触发暂停，等待解除")) {
-                            currentTask.specialAlerts.push({
-                                type: 'pause-alert',
-                                message: '快捷键暂停'
-                            });
+                            const message = '快捷键暂停';
+                            const type = 'pause-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
                         // 4. 文件找不到
                         if (line.includes('"Could not find file')) {
-                            currentTask.specialAlerts.push({
-                                type: 'file-missing',
-                                message: '路徑文件丟失'
-                            });
+                            const message = '路径文件丢失';
+                            const type = 'file-missing';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
                         // 5. 战斗策略错误
                         if (line.includes('执行地图追踪时候发生错误: "战斗策略脚本中出现未知的方法：')) {
                             const match = line.match(/执行地图追踪时候发生错误: "战斗策略脚本中出现未知的方法：(.+?)"/);
                             if (match) {
-                                currentTask.specialAlerts.push({
-                                    type: 'strategy-error',
-                                    message: `地图追踪战斗策略錯誤："${match[1]}"`
-                                });
+                                const message = `地图追踪战斗策略错误："${match[1]}"`;
+                                const type = 'strategy-error';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
                             }
                         }
 
                         // 6. 战斗脚本设置错误
                         if (line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')) {
-                            currentTask.specialAlerts.push({
-                                type: 'combat-script-error',
-                                message: '未匹配到任何战斗脚本'
-                            });
+                            const message = '未匹配到任何战斗脚本';
+                            const type = 'combat-script-error';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
                         // 7. 缺少元素采集角色
                         if (line.includes('此路径存在 "') && line.includes('元素采集 动作，')) {
                             const match = line.match(/此路径存在 "(.+?)"元素采集 动作，/);
                             if (match) {
-                                currentTask.specialAlerts.push({
-                                    type: 'element-missing',
-                                    message: `队伍缺少 ${match[1]} 元素採集角色`
-                                });
+                                const message = `队伍缺少 ${match[1]} 元素采集角色`;
+                                const type = 'element-missing';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
                             }
                         }
 
                         // 8. 缺少纳西妲
                         if (line.includes('此路径存在纳西妲收集动作，队伍中没有纳西妲角色，无法执行此路径！')) {
-                            currentTask.specialAlerts.push({
-                                type: 'nahida-missing',
-                                message: '队伍缺少纳西妲'
-                            });
+                            const message = '队伍缺少纳西妲';
+                            const type = 'nahida-missing';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
-                        // 9.切换队伍失败
+                        // 9. 切换队伍失败
                         if (line.includes('切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！')) {
-                            currentTask.specialAlerts.push({
-                                type: 'abnormal-alert',
-                                message: '切换队伍失败'
-                            });
+                            const message = '切换队伍失败';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
-                        // 99.此追踪脚本未正常走完！
+                        // 10. 当前获取焦点的窗口不是原神，尝试恢复窗口
+                        if (line.includes("当前获取焦点的窗口不是原神，尝试恢复窗口")) {
+                            const message = '窗口焦点异常，尝试恢复';
+                            const type = 'pause-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 11. 队伍角色识别失败
+                        if (line.includes("队伍角色识别失败")) {
+                            const message = '队伍角色识别失败';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 12. 打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！
+                        if (line.includes("打开大地图失败，重试 3 次")) {
+                            const message = '打开地图失败';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 99. 此追踪脚本未正常走完！
                         if (line.includes('此追踪脚本未正常走完！')) {
-                            currentTask.specialAlerts.push({
-                                type: 'abnormal-alert',
-                                message: '脚本未正常走完'
-                            });
+                            const message = '脚本未正常走完';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
                         }
 
                         const pickMatch = line.match(/交互或拾取："(.+?)"/);
@@ -2475,10 +2559,11 @@
                     const alerts = [];
 
                     // 特殊事件
-                    if (task.specialAlerts && task.specialAlerts.length > 0) {
-                        task.specialAlerts.forEach(alert => {
-                            alerts.push(`<span class="${alert.type}">${alert.message}</span>`);
-                        });
+                    if (task.specialAlerts && task.specialAlerts.size > 0) {
+                        for (let [message, alertInfo] of task.specialAlerts) {
+                            const displayMessage = alertInfo.count > 1 ? `${message} (${alertInfo.count})` : message;
+                            alerts.push(`<span class="${alertInfo.type}">${displayMessage}</span>`);
+                        }
                     }
 
                     // 如果有提示，添加到拾取物文本
@@ -2684,10 +2769,11 @@
                     const alerts = [];
 
                     // 特殊事件
-                    if (task.specialAlerts && task.specialAlerts.length > 0) {
-                        task.specialAlerts.forEach(alert => {
-                            alerts.push(`<span class="${alert.type}">${alert.message}</span>`);
-                        });
+                    if (task.specialAlerts && task.specialAlerts.size > 0) {
+                        for (let [message, alertInfo] of task.specialAlerts) {
+                            const displayMessage = alertInfo.count > 1 ? `${message} (${alertInfo.count})` : message;
+                            alerts.push(`<span class="${alertInfo.type}">${displayMessage}</span>`);
+                        }
                     }
 
                     // 如果有提示，添加到拾取物文本
