@@ -46,6 +46,7 @@
         增加錯誤&其他訊息
             选项列表不存在传送点  重试
             识别大地图位置失败
+            切换区域失败
         -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -2219,6 +2220,21 @@
                                 existing.count++;
                             } else {
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 15. 切换区域失败：".*"
+                        if (line.includes('切换区域失败："')) {
+                            const match = line.match(/切换区域失败："(.+?)"/);
+                            if (match) {
+                                const message = `切换区域失败："${match[1]}"`;
+                                const type = 'pause-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
                             }
                         }
 
