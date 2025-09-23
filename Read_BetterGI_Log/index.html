@@ -42,6 +42,10 @@
             打开大地图失败
         多次異常，顯示錯誤次數
             例如：快捷键暂停 (2)
+    200250923
+        增加錯誤&其他訊息
+            选项列表不存在传送点  重试
+            识别大地图位置失败
         -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -2185,6 +2189,30 @@
                         // 12. 打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！
                         if (line.includes("打开大地图失败，重试 3 次")) {
                             const message = '打开地图失败';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 13. 选项列表不存在传送点  重试
+                        if (line.includes("选项列表不存在传送点  重试")) {
+                            const message = '传送点不存在';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 14. 选项列表不存在传送点  重试
+                        if (line.includes("识别大地图位置失败")) {
+                            const message = '识别大地图位置失败';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
