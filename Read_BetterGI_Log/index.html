@@ -53,6 +53,7 @@
         H键筛选模式時 与 J键隐藏异常为空的任务行時 不显示 所有拾取物
         增加錯誤&其他訊息
             执行地图追踪时候发生错误: "未能返回主界面"
+        第二次讀檔時保留各功能狀態，優化用戶體驗
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -1796,7 +1797,11 @@
 
                 // 设置行高亮效果
                 setupRowHighlight();
-
+                
+                // 第二次讀檔時保留各功能状态
+                if(hasLogData = true){
+                    refreshHTML();
+                }
                 // 标记已有日志数据
                 hasLogData = true;
             } catch (e) {
