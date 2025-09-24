@@ -51,6 +51,8 @@
         按H键，输入的任务名称关键字，根据任务名称匹配关键词来显示或隐藏整个任务
             多个关键词以","分割
         H键筛选模式時 与 J键隐藏异常为空的任务行時 不显示 所有拾取物
+        增加錯誤&其他訊息
+            执行地图追踪时候发生错误: "未能返回主界面"
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -2565,6 +2567,18 @@
                                 } else {
                                     currentTask.specialAlerts.set(message, { type: type, count: 1 });
                                 }
+                            }
+                        }
+
+                        // 16. 执行地图追踪时候发生错误: "未能返回主界面"
+                        if (line.includes('执行地图追踪时候发生错误: "未能返回主界面"')) {
+                            const message = '未能返回主界面';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
 
