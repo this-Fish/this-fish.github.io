@@ -1,5 +1,5 @@
 <!-- 
-    適用於BetterGI 0.48.0
+    適用於BetterGI 0.51.0
     20250820新增了看死亡前最近的XY軸 
     20250821
         修正當有卡死與复活同時存在次數時，复活顯示不出XY軸 
@@ -29,25 +29,29 @@
             队伍缺少纳西妲
             路徑文件丟失
             自动吃药
-    200250905
+    20250905
         增加錯誤&其他訊息
             未匹配到任何战斗脚本
-    200250906
+    20250906
         增加錯誤&其他訊息
             切换队伍失败，无法执行此路径！请检查配置组中的地图追踪配置！
-    200250921
+    20250921
         增加錯誤&其他訊息
             当前获取焦点的窗口不是原神，尝试恢复窗口
             队伍角色识别失败
             打开大地图失败
         多次異常，顯示錯誤次數
             例如：快捷键暂停 (2)
-    200250923
+    20250923
         增加錯誤&其他訊息
             选项列表不存在传送点  重试
             识别大地图位置失败
             切换区域失败
-        -->
+    20250925
+        按H键，输入的任务名称关键字，根据任务名称匹配关键词来显示或隐藏整个任务
+            多个关键词以","分割
+        H键筛选模式時 与 J键隐藏异常为空的任务行時 不显示 所有拾取物
+    -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -138,13 +142,13 @@
             display: flex;
             align-items: center;
             padding: 10px;
-            background-color: #f8f9fa;
+            background-color: #e7e7e7;
             border-radius: 4px;
             margin: 5px 0;
         }
 
         .group-header:hover {
-            background-color: #e9ecef;
+            background-color: #bdbebf;
         }
 
         .arrow {
@@ -365,7 +369,7 @@
             /* 自动吃药 */
             font-weight: bold;
         }
-        
+
         /* 在CSS样式中添加战斗脚本错误样式 */
         .combat-script-error {
             color: red;
@@ -543,7 +547,7 @@
         .legacy-format .group-header {
             /* 移除sticky定位 */
             position: static;
-            background-color: #f8f9fa;
+            background-color: #e7e7e7;
             padding: 10px;
             margin: 5px 0;
         }
@@ -595,7 +599,7 @@
         .sticky-title {
             position: sticky;
             top: 0;
-            background-color: #f8f9fa;
+            background-color: #e7e7e7;
             z-index: 100;
             padding: 10px;
             margin: -10px -10px 10px -10px;
@@ -663,12 +667,11 @@
             bottom: 60px;
         }
 
-        /* 新增导出相关样式 */
         .mode-indicator {
             position: fixed;
             top: 10px;
             left: 10px;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(76, 175, 80, 0.8);
             color: white;
             padding: 8px 12px;
             border-radius: 4px;
@@ -712,6 +715,11 @@
         .static-mode .coords-cell.pinned::after,
         .static-mode .has-battle-events.pinned::after {
             content: "";
+        }
+
+        /* 当筛选提示显示时，静态模式提示向右移动更多 */
+        .filter-indicator.visible~.mode-indicator.static-mode {
+            left: calc(var(--filter-indicator-width) + 20px);
         }
 
         /* 提示框样式 */
@@ -1011,10 +1019,61 @@
             background-color: #2a2a2a;
             border-color: #555;
         }
+
+        /* 新增：篩選狀態提示樣式 */
+        .filter-indicator {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 165, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 10000;
+            display: none;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .filter-indicator.visible {
+            display: block;
+        }
+
+        .filter-indicator .filter-keywords {
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+
+        /* 暗色主题适配 */
+        body.dark-theme .filter-indicator {
+            background-color: rgba(255, 140, 0, 0.9);
+            color: #fff;
+        }
+
+        body.dark-theme .filter-indicator .filter-keywords {
+            color: #fff59d;
+        }
+
+        body.dark-theme .mode-indicator {
+            background-color: rgba(56, 142, 60, 0.8);
+        }
+
+        /* 任務篩選 */
+        .control-btn:nth-child(7).active {
+            background-color: #FF9800;
+            border-color: #FF9800;
+        }
     </style>
 </head>
 
 <body>
+    <!-- 新增：篩選狀態提示 -->
+    <div class="filter-indicator" id="filterIndicator">
+        <span>正在篩選: </span>
+        <span class="filter-keywords" id="filterKeywords"></span>
+        <br><small>按 H 鍵退出篩選</small>
+    </div>
     <div class="mode-indicator">静态模式 - 请使用浏览器"另存新档"功能保存页面</div>
 
     <div id="container">
@@ -1035,6 +1094,7 @@
                 <button class="control-btn" data-key="73">拾取物列</button>
                 <button class="control-btn" data-key="80">导出模式</button>
                 <button class="control-btn" data-key="74">异常任务</button>
+                <button class="control-btn" data-key="72">任務篩選</button>
             </div>
         </div>
     </div>
@@ -1077,6 +1137,9 @@
         let uploadContainerVisible = false; // 电脑设备上上传区域的显示状态
 
         let controlButtons = {}; // 存储按钮状态
+        let isFilterMode = false; // 跟踪篩選模式狀態
+        let currentFilterKeywords = []; // 當前篩選關鍵字
+
 
 
         // 自定义确认对话框
@@ -1159,6 +1222,10 @@
 
             // 添加静态模式类
             document.body.classList.add('static-mode');
+            const modeIndicator = document.querySelector('.mode-indicator');
+            if (modeIndicator) {
+                modeIndicator.classList.add('static-mode');
+            }
             isStaticMode = true;
             // 显示提示信息
             updateButtonState(80);
@@ -1188,6 +1255,10 @@
 
             // 移除静态模式类
             document.body.classList.remove('static-mode');
+            const modeIndicator = document.querySelector('.mode-indicator');
+            if (modeIndicator) {
+                modeIndicator.classList.remove('static-mode');
+            }
             isStaticMode = false;
 
             // 重新初始化弹窗
@@ -1284,7 +1355,8 @@
                 89: statsColumnsVisible, // 统计列
                 73: picksColumnsVisible, // 拾取物列
                 80: isStaticMode,        // 导出模式
-                74: hideZeroStatsTasks   // 异常任务
+                74: hideZeroStatsTasks,  // 异常任务
+                72: isFilterMode         // 任務篩選
             };
 
             // 更新按钮显示状态
@@ -1329,16 +1401,24 @@
                 case 74: // 异常任务
                     isActive = hideZeroStatsTasks;
                     break;
+                case 72: // 任務篩選
+                    isActive = isFilterMode;
+                    break;
+                case 85: // 表格格式切换
+                    isActive = useLegacyFormat;
+                    break;
             }
 
             // 更新按钮状态
             controlButtons[keyCode] = isActive;
             const button = document.querySelector(`.control-btn[data-key="${keyCode}"]`);
 
-            if (isActive) {
-                button.classList.add('active');
-            } else {
-                button.classList.remove('active');
+            if (button) {
+                if (isActive) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
             }
         }
 
@@ -1348,7 +1428,6 @@
                 updateButtonState(parseInt(keyCode));
             }
         }
-
 
         // 处理文件选择事件
         async function handleFileSelect(e) {
@@ -1408,6 +1487,257 @@
             });
         }
 
+        // 任務篩選功能
+        function toggleTaskFilter() {
+            if (isFilterMode) {
+                // 退出篩選模式
+                exitFilterMode();
+            } else {
+                // 進入篩選模式
+                enterFilterMode();
+            }
+        }
+
+        // 進入篩選模式
+        function enterFilterMode() {
+            const input = prompt("请输入要筛选的任务关键字（多个关键字用逗号分隔）\n\n例如：蒙德,璃月,稻妻");
+
+            if (input === null) {
+                // 用戶取消輸入
+                return;
+            }
+
+            const keywords = input.split(',')
+                .map(keyword => keyword.trim())
+                .filter(keyword => keyword.length > 0);
+
+            if (keywords.length === 0) {
+                alert("请输入有效的关键字！");
+                return;
+            }
+
+            currentFilterKeywords = keywords;
+            isFilterMode = true;
+
+            // 應用篩選
+            applyTaskFilter();
+
+            // 顯示篩選提示
+            showFilterIndicator();
+
+            // 更新按鈕狀態
+            updateButtonState(72);
+        }
+
+        // 修改退出筛选模式的函数，确保正确处理零统计状态
+        function exitFilterMode() {
+            isFilterMode = false;
+            currentFilterKeywords = [];
+
+            // 移除筛选，显示所有任务和总计行
+            removeTaskFilter();
+
+            // 重新应用零统计任务隐藏（如果启用）
+            if (hideZeroStatsTasks) {
+                toggleZeroStatsTasksNormal(); // 使用非筛选模式版本
+            }
+
+            // 隐藏筛选提示
+            hideFilterIndicator();
+
+            // 更新按钮状态
+            updateButtonState(72);
+        }
+
+        // 修改 applyTaskFilter 函数，在筛选模式下隐藏所有拾取物
+        function applyTaskFilter() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const container = table.closest('.group-container');
+                let groupHasVisibleTask = false; // 标记配置组是否有可见任务
+
+                // 隐藏所有拾取物行（summary-row）
+                const summaryRows = table.querySelectorAll('.summary-row');
+                summaryRows.forEach(row => {
+                    row.style.display = 'none';
+                });
+
+                // 新版格式：直接扫描所有行
+                if (!useLegacyFormat) {
+                    const rows = table.querySelectorAll('tr');
+
+                    rows.forEach(row => {
+                        // 跳过表头行和已经隐藏的summary-row
+                        if (row.querySelector('th') || row.classList.contains('summary-row')) {
+                            return;
+                        }
+
+                        // 获取任务名称（第一个td）
+                        const taskNameCell = row.querySelector('td:first-child');
+                        if (taskNameCell) {
+                            const taskName = taskNameCell.textContent.toLowerCase();
+
+                            // 检查任务名称是否包含任一关键字
+                            const matchesKeyword = currentFilterKeywords.some(keyword =>
+                                taskName.includes(keyword.toLowerCase())
+                            );
+
+                            // 检查统计列是否非零（如果启用了零统计隐藏）
+                            let matchesStats = true;
+                            if (hideZeroStatsTasks) {
+                                const reviveCell = row.querySelector('.column-revive');
+                                const retryCell = row.querySelector('.column-retry');
+                                const retryDetailCell = row.querySelector('.column-retry-detail');
+                                const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                                const timeoutCell = row.querySelector('.column-timeout');
+                                const teleportCell = row.querySelector('.column-teleport');
+
+                                if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                                    const isAllZero =
+                                        (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                                        (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                                        (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                                        (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                                        (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                                        (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                                    matchesStats = !isAllZero;
+                                }
+                            }
+
+                            if (matchesKeyword && matchesStats) {
+                                // 显示匹配关键字且统计非零的任务
+                                row.style.display = '';
+                                groupHasVisibleTask = true;
+                            } else {
+                                // 隐藏不匹配的任务
+                                row.style.display = 'none';
+                            }
+                        }
+                    });
+                }
+                // 旧版格式：只扫描main-row-name类的任务名称
+                else {
+                    // 获取所有任务名称行（具有main-row-name类的行）
+                    const taskNameRows = table.querySelectorAll('tr .main-row-name');
+
+                    taskNameRows.forEach(taskNameCell => {
+                        const row = taskNameCell.closest('tr');
+                        const taskId = row.getAttribute('data-task-id');
+
+                        if (taskId) {
+                            const taskName = taskNameCell.textContent.toLowerCase();
+
+                            // 检查任务名称是否包含任一关键字
+                            const matchesKeyword = currentFilterKeywords.some(keyword =>
+                                taskName.includes(keyword.toLowerCase())
+                            );
+
+                            // 检查统计列是否非零（如果启用了零统计隐藏）
+                            let matchesStats = true;
+                            if (hideZeroStatsTasks) {
+                                const reviveCell = row.querySelector('.column-revive');
+                                const retryCell = row.querySelector('.column-retry');
+                                const retryDetailCell = row.querySelector('.column-retry-detail');
+                                const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                                const timeoutCell = row.querySelector('.column-timeout');
+                                const teleportCell = row.querySelector('.column-teleport');
+
+                                if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                                    const isAllZero =
+                                        (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                                        (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                                        (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                                        (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                                        (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                                        (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                                    matchesStats = !isAllZero;
+                                }
+                            }
+
+                            if (matchesKeyword && matchesStats) {
+                                // 显示匹配的任务（包括任务名称行和拾取物行）
+                                const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                relatedRows.forEach(r => {
+                                    // 跳过summary-row，因为已经在前面统一隐藏了
+                                    if (!r.classList.contains('summary-row')) {
+                                        r.style.display = '';
+                                    }
+                                });
+                                groupHasVisibleTask = true;
+                            } else {
+                                // 隐藏不匹配的任务（包括任务名称行和拾取物行）
+                                const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                relatedRows.forEach(r => {
+                                    r.style.display = 'none';
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // 如果配置组没有可见任务，隐藏整个配置组
+                if (groupHasVisibleTask) {
+                    container.style.display = '';
+                } else {
+                    container.style.display = 'none';
+                }
+            });
+        }
+
+        // 修改移除任務篩選函數，恢復拾取物的顯示
+        function removeTaskFilter() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const container = table.closest('.group-container');
+
+                // 顯示所有行，包括拾取物行（根據零統計狀態）
+                const rows = table.querySelectorAll('tr');
+                rows.forEach(row => {
+                    if (!row.querySelector('th')) {
+                        if (row.classList.contains('summary-row')) {
+                            // 汇总行：根据hideZeroStatsTasks状态显示
+                            row.style.display = hideZeroStatsTasks ? 'none' : '';
+                        } else {
+                            row.style.display = '';
+                        }
+                    }
+                });
+
+                // 顯示配置組
+                container.style.display = '';
+            });
+
+            // // 重新應用零統計任務隱藏（如果啟用）
+            // if (hideZeroStatsTasks) {
+            //     toggleZeroStatsTasks();
+            // }
+        }
+
+        // 顯示篩選提示
+        function showFilterIndicator() {
+            const indicator = document.getElementById('filterIndicator');
+            const keywordsElement = document.getElementById('filterKeywords');
+
+            keywordsElement.textContent = currentFilterKeywords.join(', ');
+            indicator.classList.add('visible');
+
+            // 动态计算筛选提示宽度并设置CSS变量
+            const filterWidth = indicator.offsetWidth;
+            document.documentElement.style.setProperty('--filter-indicator-width', filterWidth + 'px');
+        }
+
+        // 隱藏篩選提示
+        function hideFilterIndicator() {
+            const indicator = document.getElementById('filterIndicator');
+            indicator.classList.remove('visible');
+
+            // 移除CSS变量
+            document.documentElement.style.removeProperty('--filter-indicator-width');
+        }
 
         // 拖放事件处理
         const dropZone = document.getElementById('dropZone');
@@ -2645,15 +2975,15 @@
                 });
 
                 html += `
-            <tr>
-                <td colspan="11" class="column-picks">
-                    <strong>拾取物总计：</strong>
-                    ${formatPicks(group.picks)}
-                </td>
-            </tr>
-            </table>
-            </div>
-            </div>`;
+                    <tr class="ignore-sort summary-row">
+                        <td colspan="11" class="column-picks">
+                            <span class="picks-bold">所有拾取物: </span>
+                            ${formatPicks(group.picks)}
+                        </td>
+                    </tr>
+                </table>
+                </div>
+                </div>`;
             });
 
             html += '</div>';
@@ -2857,8 +3187,10 @@
                 });
 
                 html += `
-                <tr class="ignore-sort">
-                    <td colspan="10" class="column-picks"><span class="picks-bold">所有拾取物: </span>${formatPicks(group.picks)}</td>
+                <tr class="ignore-sort summary-row">
+                    <td colspan="10" class="column-picks">
+                        <span class="picks-bold">所有拾取物: </span>${formatPicks(group.picks)}
+                        </td>
                 </tr>
                 </tbody></table>
                 </div>
@@ -2990,9 +3322,14 @@
             }, 2000);
         }
 
-        // 新增：重新生成HTML
         function refreshHTML() {
             const result = parsingContext.allGroups;
+
+            // 保存当前状态
+            const currentHideZeroStats = hideZeroStatsTasks;
+            const currentFilterMode = isFilterMode;
+            currentFilterKeywords = [...currentFilterKeywords];
+
             dropZone.innerHTML = generateHTML(result);
             setupCoordPopups();
             document.querySelectorAll('.group-header').forEach((el, i) => {
@@ -3003,7 +3340,6 @@
             });
 
             // 应用当前显示状态
-            // 应用当前显示状态
             updateTimeColumnsVisibility();
             updateStatsColumnsVisibility();
             updatePicksColumnsVisibility();
@@ -3012,8 +3348,29 @@
             // 设置行高亮效果
             setupRowHighlight();
 
-            // 应用零统计任务显示状态
-            toggleZeroStatsTasks();
+            // 恢复状态
+            hideZeroStatsTasks = currentHideZeroStats;
+            isFilterMode = currentFilterMode;
+            currentFilterKeywords = currentFilterKeywords;
+
+            // 应用筛选状态
+            if (isFilterMode) {
+                applyTaskFilter();
+                showFilterIndicator();
+            }
+
+            // 应用异常任务显示状态
+            if (hideZeroStatsTasks) {
+                // 使用setTimeout确保DOM完全加载
+                setTimeout(() => {
+                    if (!isFilterMode) {
+                        toggleZeroStatsTasksNormal();
+                    }
+                    // 更新按钮状态
+                    updateButtonState(74);
+                    updateButtonState(72);
+                }, 150);
+            }
         }
 
         // 新增：设置行高亮效果
@@ -3063,7 +3420,9 @@
         document.onkeydown = function (e) {
             var keyNum = e;       // // 使用事件对象而不是 window.event
 
-            if (keyNum.keyCode == 55) {
+
+
+           if (keyNum.keyCode == 55) {
                 // 7 計算原神下次40體時間
                 // 呼叫視窗、要求現在體力
                 var ps = prompt("輸入現在_原神_體力", "");
@@ -3204,15 +3563,32 @@
                     return;
                 }
 
-                // 切换格式前重置所有列为显示状态
-                // timeColumnsVisible = true;
-                // statsColumnsVisible = true;
-                // picksColumnsVisible = true;
+                // 保存当前状态
+                const currentHideZeroStats = hideZeroStatsTasks;
+                const currentFilterMode = isFilterMode;
 
                 useLegacyFormat = !useLegacyFormat;
                 refreshHTML();
                 showFormatToggleIndicator();
+
+                // 恢复状态
+                hideZeroStatsTasks = currentHideZeroStats;
+                isFilterMode = currentFilterMode;
+
+                // 更新按钮状态
+                updateButtonState(74); // 异常任务按钮
+                updateButtonState(72); // 筛选模式按钮
+
                 e.preventDefault(); // 阻止默认行为
+            } else if (keyNum.keyCode == 72) { // H鍵 - 任務篩選
+                // 檢查是否有日志數據
+                if (!hasLogData) {
+                    e.preventDefault();
+                    return;
+                }
+
+                toggleTaskFilter();
+                e.preventDefault();
             } else if (keyNum.keyCode == 73) { // I键 - 切换拾取物列显示（仅旧版格式）
                 // if (!useLegacyFormat) {
                 picksColumnsVisible = !picksColumnsVisible;
@@ -3221,9 +3597,7 @@
                 e.preventDefault(); // 阻止默认行为
                 // }
             } else if (keyNum.keyCode == 74) { // J键 - 隐藏/显示所有统计为0的任务
-                hideZeroStatsTasks = !hideZeroStatsTasks;
                 toggleZeroStatsTasks();
-                showZeroStatsToggleIndicator();
                 e.preventDefault(); // 阻止默认行为
             } else if (keyNum.keyCode === 80 || keyNum.key === 'p' || keyNum.key === 'P') {
                 // 阻止默认行为，避免可能冲突
@@ -3272,8 +3646,159 @@
             }, 2000);
         }
 
-        // 添加切换零统计任务显示状态的函数
+        // 修改退出零统计筛选的逻辑
         function toggleZeroStatsTasks() {
+            hideZeroStatsTasks = !hideZeroStatsTasks;
+
+            // 如果在筛选模式下，需要重新应用筛选
+            if (isFilterMode) {
+                // 先应用筛选模式
+                applyTaskFilter();
+                // 然后应用零统计筛选
+                toggleZeroStatsTasksInFilterMode();
+            } else {
+                // 非筛选模式下正常执行
+                toggleZeroStatsTasksNormal();
+            }
+
+            showZeroStatsToggleIndicator();
+        }
+
+        // 修改筛选模式下的零统计筛选函数，确保拾取物保持隐藏
+        function toggleZeroStatsTasksInFilterMode() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const container = table.closest('.group-container');
+                let groupHasVisibleTask = false;
+
+                // 确保拾取物行保持隐藏
+                const summaryRows = table.querySelectorAll('.summary-row');
+                summaryRows.forEach(row => {
+                    row.style.display = 'none';
+                });
+
+                // 新版格式：直接扫描所有行
+                if (!useLegacyFormat) {
+                    const rows = table.querySelectorAll('tr');
+
+                    rows.forEach(row => {
+                        // 跳过表头行和summary-row
+                        if (row.querySelector('th') || row.classList.contains('summary-row')) {
+                            return;
+                        }
+
+                        // 获取任务名称
+                        const taskNameCell = row.querySelector('td:first-child');
+                        if (taskNameCell) {
+                            const taskName = taskNameCell.textContent.toLowerCase();
+
+                            // 检查任务名称是否包含任一关键字
+                            const matchesKeyword = currentFilterKeywords.some(keyword =>
+                                taskName.includes(keyword.toLowerCase())
+                            );
+
+                            // 检查统计列是否非零
+                            let matchesStats = true;
+                            if (hideZeroStatsTasks) {
+                                const reviveCell = row.querySelector('.column-revive');
+                                const retryCell = row.querySelector('.column-retry');
+                                const retryDetailCell = row.querySelector('.column-retry-detail');
+                                const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                                const timeoutCell = row.querySelector('.column-timeout');
+                                const teleportCell = row.querySelector('.column-teleport');
+
+                                if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                                    const isAllZero =
+                                        (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                                        (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                                        (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                                        (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                                        (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                                        (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                                    matchesStats = !isAllZero;
+                                }
+                            }
+
+                            if (matchesKeyword && matchesStats) {
+                                row.style.display = '';
+                                groupHasVisibleTask = true;
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        }
+                    });
+                }
+                // 旧版格式
+                else {
+                    const taskNameRows = table.querySelectorAll('tr .main-row-name');
+
+                    taskNameRows.forEach(taskNameCell => {
+                        const row = taskNameCell.closest('tr');
+                        const taskId = row.getAttribute('data-task-id');
+
+                        if (taskId) {
+                            const taskName = taskNameCell.textContent.toLowerCase();
+
+                            // 检查任务名称是否包含任一关键字
+                            const matchesKeyword = currentFilterKeywords.some(keyword =>
+                                taskName.includes(keyword.toLowerCase())
+                            );
+
+                            // 检查统计列是否非零
+                            let matchesStats = true;
+                            if (hideZeroStatsTasks) {
+                                const reviveCell = row.querySelector('.column-revive');
+                                const retryCell = row.querySelector('.column-retry');
+                                const retryDetailCell = row.querySelector('.column-retry-detail');
+                                const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                                const timeoutCell = row.querySelector('.column-timeout');
+                                const teleportCell = row.querySelector('.column-teleport');
+
+                                if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                                    const isAllZero =
+                                        (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                                        (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                                        (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                                        (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                                        (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                                        (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                                    matchesStats = !isAllZero;
+                                }
+                            }
+
+                            if (matchesKeyword && matchesStats) {
+                                const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                relatedRows.forEach(r => {
+                                    // 跳过summary-row
+                                    if (!r.classList.contains('summary-row')) {
+                                        r.style.display = '';
+                                    }
+                                });
+                                groupHasVisibleTask = true;
+                            } else {
+                                const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                relatedRows.forEach(r => {
+                                    r.style.display = 'none';
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // 如果配置组没有可见任务，隐藏整个配置组
+                if (groupHasVisibleTask) {
+                    container.style.display = '';
+                } else {
+                    container.style.display = 'none';
+                }
+            });
+        }
+
+        // 新增：非筛选模式下的零统计筛选
+        function toggleZeroStatsTasksNormal() {
             const tables = document.querySelectorAll('table');
 
             // 先显示所有配置组
@@ -3282,15 +3807,23 @@
             });
 
             tables.forEach(table => {
-
                 const container = table.closest('.group-container');
-                let hasVisibleTask = false; // 标记配置组是否有可见任务
+                let hasVisibleTask = false;
 
                 const rows = table.querySelectorAll('tr');
 
                 rows.forEach(row => {
                     // 跳过表头行
-                    if (row.querySelector('th')) return;
+                    if (row.querySelector('th')) {
+                        row.style.display = '';
+                        return;
+                    }
+
+                    // 检查是否为汇总行
+                    if (row.classList.contains('summary-row')) {
+                        row.style.display = hideZeroStatsTasks ? 'none' : '';
+                        return;
+                    }
 
                     // 获取统计单元格
                     const reviveCell = row.querySelector('.column-revive');
@@ -3301,7 +3834,6 @@
                     const teleportCell = row.querySelector('.column-teleport');
 
                     if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
-                        // 检查所有统计值是否都为0或空
                         const isAllZero =
                             (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
                             (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
@@ -3310,13 +3842,10 @@
                             (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
                             (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
 
-                        // 根据设置显示或隐藏行
                         if (isAllZero) {
                             row.style.display = hideZeroStatsTasks ? 'none' : '';
 
-                            row.style.display = hideZeroStatsTasks ? 'none' : '';
-
-                            // 对于旧版格式，还需要处理关联的拾取物行
+                            // 对于旧版格式，处理关联行
                             if (useLegacyFormat) {
                                 const taskId = row.getAttribute('data-task-id');
                                 if (taskId) {
@@ -3327,11 +3856,10 @@
                                 }
                             }
                         } else {
-                            // 如果有任何一个统计值不为0，标记配置组有可见任务
                             hasVisibleTask = true;
                             row.style.display = '';
 
-                            // 对于旧版格式，确保关联的拾取物行也显示
+                            // 对于旧版格式，确保关联行显示
                             if (useLegacyFormat) {
                                 const taskId = row.getAttribute('data-task-id');
                                 if (taskId) {
