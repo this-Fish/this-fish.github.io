@@ -54,6 +54,14 @@
         增加錯誤&其他訊息
             执行地图追踪时候发生错误: "未能返回主界面"
         第二次讀檔時保留各功能狀態，優化用戶體驗
+    20250927
+        調整部份UI
+            表头悬浮更貼近頂部
+            功能按钮區域增加上下邊距
+        修復摺疊或展開時，箭头顯示錯誤問題
+        配置組增加顯示該組運行時隊伍角色
+            隊伍角色與任務資訊始終顯示在頂部
+            隊伍角色行在篩選模式與導出模式下置中顯示
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -120,7 +128,8 @@
         th {
             background-color: #888;
             position: sticky;
-            top: 0;
+            /* top: 0; */
+            top: -22px;
             /* 固定在页面顶部 */
             z-index: 1;
             /* 确保表头在内容上方 */
@@ -143,7 +152,8 @@
         .group-header {
             cursor: pointer;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
+            /* 改为flex-start确保内容顶部对齐 */
             padding: 10px;
             background-color: #e7e7e7;
             border-radius: 4px;
@@ -154,14 +164,21 @@
             background-color: #bdbebf;
         }
 
+        /* 修改箭头相关样式 */
         .arrow {
             display: inline-block;
             margin-right: 10px;
+            /* margin-top: 25px; */
+            margin-top: 25px;
+            /* 与标题文字对齐 */
             transition: transform 0.2s;
+            transform: rotate(0deg);
+            /* 默认向右（折叠状态） */
         }
 
         .arrow.collapsed {
-            transform: rotate(-90deg);
+            transform: rotate(90deg);
+            /* 展开时向下 */
         }
 
         .group-container {
@@ -559,12 +576,14 @@
             background-color: #333;
         }
 
-        /* 确保表格表头保持固定 */
+        /* 确保旧版格式下表头位置正确 */
         .legacy-format .sticky-header {
-            position: sticky;
-            top: 0;
-            background-color: #888;
-            z-index: 2;
+            top: 40px;
+        }
+
+        /* 對於舊版格式的特殊調整 */
+        .legacy-format .sticky-header {
+            top: 40px;
         }
 
         .legacy-format .main-row-name {
@@ -826,6 +845,7 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
+            margin: 8px 0px;
             gap: 8px;
             width: 100%;
         }
@@ -922,6 +942,54 @@
         /* 电脑设备显示控制 */
         #fileUploadContainer.visible {
             display: flex;
+        }
+
+        /* 新增：移动设备功能按钮响应式样式 */
+        @media (max-width: 768px),
+        (pointer: coarse) {
+            #mobileControls {
+                flex-wrap: wrap;
+                max-height: 88px;
+                /* 限制最多两行高度 */
+                overflow: hidden;
+                gap: 4px;
+                /* 减小按钮间距 */
+            }
+
+            .control-btn {
+                flex: 0 0 calc(24% - 6px);
+                /* 每行显示2个按钮，考虑间隙 */
+                min-width: calc(24% - 6px);
+                font-size: 12px;
+                /* 减小字体大小 */
+                padding: 6px 8px;
+                /* 调整内边距 */
+                margin: 2px;
+                /* 减小外边距 */
+            }
+
+            /* 确保按钮文本不会换行 */
+            .control-btn {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+
+        /* 超小屏幕优化（宽度小于400px） */
+        @media (max-width: 400px) {
+            #mobileControls {
+                max-height: 80px;
+                /* 进一步减小高度 */
+                gap: 2px;
+            }
+
+            .control-btn {
+                flex: 0 0 calc(24% - 4px);
+                min-width: calc(24% - 4px);
+                font-size: 11px;
+                padding: 4px 6px;
+            }
         }
 
         /* 新增移动设备样式 */
@@ -1067,6 +1135,136 @@
             background-color: #FF9800;
             border-color: #FF9800;
         }
+
+        .header-content {
+            flex: 1;
+            /* 占据剩余空间 */
+            display: flex;
+            flex-direction: column;
+            /* 垂直排列 */
+        }
+
+        /* 队伍角色显示样式 */
+        .team-roles {
+            margin-top: -20px;
+            padding: 8px;
+            /* background-color: #f8f8f8; */
+            border-radius: 4px;
+            /* border-left: 3px solid #4CAF50; */
+            font-size: 14px;
+        }
+
+        .team-role {
+            /* margin: 3px 0; */
+            /* padding: 2px 5px; */
+            font-family: monospace;
+            color: #555;
+        }
+
+        body.dark-theme .team-role {
+            color: #ccc;
+        }
+
+        /* 隊伍角色行樣式 - 修改後 */
+        .team-roles-row {
+            background-color: #f0f0f0 !important;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: -22px;
+            z-index: 4;
+            font-size: 14px;
+        }
+
+        /* 修正暗色模式下队伍角色行的背景色 */
+        body.dark-theme .team-roles-row {
+            background-color: #888 !important;
+            /* border-bottom-color: #444; */
+            color: #ffffff;
+        }
+
+        /* 确保队伍角色行的颜色与任务名称一致 */
+        .team-roles-content {
+            /* padding: 8px; */
+            font-family: monospace;
+            color: #333;
+            font-weight: bolder;
+            /* 亮色模式下的字体颜色，与任务名称一致 */
+        }
+
+        .team-role-line {
+            /* margin: 3px 0; */
+            /* padding: 2px 0; */
+            line-height: 1.4;
+        }
+
+        body.dark-theme .team-role-line {
+            color: #ffffff;
+        }
+
+        /* 调整表头位置，为队伍角色行留出空间 */
+        .sticky-header {
+            position: sticky;
+            top: 40px;
+            /* 根据队伍角色行高度调整 */
+            z-index: 3;
+        }
+
+
+
+        /* 对于旧版格式的特殊调整 */
+        .legacy-format .team-roles-row {
+            top: -22px;
+            /* 统一为0px */
+        }
+
+        body.dark-theme .team-roles-content {
+            color: #ffffff;
+            /* 暗色模式下的字体颜色，与任务名称一致 */
+        }
+
+        /* 确保任务信息行在队伍角色行之下 */
+        .group-container table {
+            position: relative;
+            /* 移除可能的额外边距 */
+        }
+
+        /* 隊伍角色行樣式 - 修改後 */
+        .team-roles-row {
+            background-color: #888 !important;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: -22px;
+            /* 固定在頂部，在表頭上方 */
+            z-index: 4;
+            /* 確保在表頭上方 */
+            font-size: 14px;
+        }
+
+        /* 确保配置组标题不会覆盖队伍角色行 */
+        .group-header {
+            position: relative;
+            z-index: 5;
+            /* 高于队伍角色行 */
+        }
+
+        /* 表头样式 */
+        th.sticky-header {
+            position: sticky;
+            top: 40;
+            /* 初始值為0，由JS動態設置 */
+            z-index: 3;
+        }
+
+        /* 当body有static-mode或filter-mode类时，队伍角色行居中 */
+        body.static-mode .team-role-line,
+        body.filter-mode .team-role-line {
+            text-align: center;
+        }
+
+        /* 默认状态 */
+        .team-role-line {
+            text-align: left;
+        }
     </style>
 </head>
 
@@ -1077,7 +1275,7 @@
         <span class="filter-keywords" id="filterKeywords"></span>
         <br><small>按 H 鍵退出篩選</small>
     </div>
-    <div class="mode-indicator">静态模式 - 请使用浏览器"另存新档"功能保存页面</div>
+    <div class="mode-indicator">静态模式 <br><small>请 另存新档 或 截圖 分享页面</small></div>
 
     <div id="container">
         <div id="dropZone" class="empty">将日志文件拖放到此处</div>
@@ -1230,6 +1428,10 @@
                 modeIndicator.classList.add('static-mode');
             }
             isStaticMode = true;
+
+            // 添加static-mode类到body
+            document.body.classList.add('static-mode');
+
             // 显示提示信息
             updateButtonState(80);
             // alert("页面已转换为静态模式，请使用浏览器的\"另存新档\"功能(Ctrl+S)保存网页。");
@@ -1264,6 +1466,9 @@
             }
             isStaticMode = false;
 
+            // 移除static-mode类
+            document.body.classList.remove('static-mode');
+
             // 重新初始化弹窗
             if (window.setupCoordPopups) {
                 setupCoordPopups();
@@ -1279,10 +1484,12 @@
                 // 交互模式下询问用户是否导出
                 showCustomConfirm(
                     "导出静态报告",
-                    "是否显示卡死点并转换为静态模式以便导出文件？\n\n转换为静态模式后，请使用浏览器的\"另存新档\"功能(Ctrl+S)保存网页。"
+                    `是否显示卡死点并转换为静态模式以便导出文件？转换为静态模式后，请使用浏览器的\"另存新档\"功能(Ctrl+S)分享网页。或截图分享当前页面。`
+
                 ).then(confirmed => {
                     if (confirmed) {
                         exportAsStaticHTML();
+                        // 注意：exportAsStaticHTML()内部已经添加了static-mode类
                     }
                 });
             }
@@ -1347,6 +1554,9 @@
                     handleControlButtonClick(keyCode);
                 });
             });
+
+            // 确保初始状态没有这些类名
+            document.body.classList.remove('static-mode', 'filter-mode');
         };
 
         // 初始化功能按钮状态
@@ -1462,8 +1672,13 @@
                 setupCoordPopups();
                 document.querySelectorAll('.group-header').forEach((el, i) => {
                     el.onclick = () => {
+                        const arrow = el.querySelector('.arrow');
+                        const content = document.getElementById(`group-${i}`);
+
+                        // 切换状态
                         el.classList.toggle('collapsed');
-                        document.getElementById(`group-${i}`).classList.toggle('collapsed');
+                        content.classList.toggle('collapsed');
+                        arrow.classList.toggle('collapsed'); // 切换箭头方向
                     };
                 });
 
@@ -1472,6 +1687,11 @@
                 updateStatsColumnsVisibility();
                 updateTableFormat();
                 setupRowHighlight();
+
+                // 添加：动态调整表头位置
+                setTimeout(() => {
+                    adjustTableHeaderPosition();
+                }, 100);
 
                 // 标记已有日志数据
                 hasLogData = true;
@@ -1522,6 +1742,9 @@
             currentFilterKeywords = keywords;
             isFilterMode = true;
 
+            // 添加filter-mode类到body
+            document.body.classList.add('filter-mode');
+
             // 應用篩選
             applyTaskFilter();
 
@@ -1539,6 +1762,9 @@
 
             // 移除筛选，显示所有任务和总计行
             removeTaskFilter();
+
+            // 移除filter-mode类
+            document.body.classList.remove('filter-mode');
 
             // 重新应用零统计任务隐藏（如果启用）
             if (hideZeroStatsTasks) {
@@ -1558,25 +1784,31 @@
 
             tables.forEach(table => {
                 const container = table.closest('.group-container');
-                let groupHasVisibleTask = false; // 标记配置组是否有可见任务
+                let groupHasVisibleTask = false;
 
-                // 隐藏所有拾取物行（summary-row）
+                // 确保队伍角色行显示
+                const teamRolesRow = table.querySelector('.team-roles-row');
+                if (teamRolesRow) {
+                    teamRolesRow.style.display = '';
+                }
+
+                // 隐藏所有拾取物行
                 const summaryRows = table.querySelectorAll('.summary-row');
                 summaryRows.forEach(row => {
                     row.style.display = 'none';
                 });
 
-                // 新版格式：直接扫描所有行
+                // 新版格式
                 if (!useLegacyFormat) {
                     const rows = table.querySelectorAll('tr');
 
                     rows.forEach(row => {
-                        // 跳过表头行和已经隐藏的summary-row
-                        if (row.querySelector('th') || row.classList.contains('summary-row')) {
+                        // 跳过表头行、队伍角色行和已经隐藏的summary-row
+                        if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
                             return;
                         }
 
-                        // 获取任务名称（第一个td）
+                        // 获取任务名称
                         const taskNameCell = row.querySelector('td:first-child');
                         if (taskNameCell) {
                             const taskName = taskNameCell.textContent.toLowerCase();
@@ -1586,7 +1818,7 @@
                                 taskName.includes(keyword.toLowerCase())
                             );
 
-                            // 检查统计列是否非零（如果启用了零统计隐藏）
+                            // 检查统计列是否非零
                             let matchesStats = true;
                             if (hideZeroStatsTasks) {
                                 const reviveCell = row.querySelector('.column-revive');
@@ -1610,19 +1842,16 @@
                             }
 
                             if (matchesKeyword && matchesStats) {
-                                // 显示匹配关键字且统计非零的任务
                                 row.style.display = '';
                                 groupHasVisibleTask = true;
                             } else {
-                                // 隐藏不匹配的任务
                                 row.style.display = 'none';
                             }
                         }
                     });
                 }
-                // 旧版格式：只扫描main-row-name类的任务名称
+                // 旧版格式
                 else {
-                    // 获取所有任务名称行（具有main-row-name类的行）
                     const taskNameRows = table.querySelectorAll('tr .main-row-name');
 
                     taskNameRows.forEach(taskNameCell => {
@@ -1637,7 +1866,7 @@
                                 taskName.includes(keyword.toLowerCase())
                             );
 
-                            // 检查统计列是否非零（如果启用了零统计隐藏）
+                            // 检查统计列是否非零
                             let matchesStats = true;
                             if (hideZeroStatsTasks) {
                                 const reviveCell = row.querySelector('.column-revive');
@@ -1661,17 +1890,14 @@
                             }
 
                             if (matchesKeyword && matchesStats) {
-                                // 显示匹配的任务（包括任务名称行和拾取物行）
                                 const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
                                 relatedRows.forEach(r => {
-                                    // 跳过summary-row，因为已经在前面统一隐藏了
                                     if (!r.classList.contains('summary-row')) {
                                         r.style.display = '';
                                     }
                                 });
                                 groupHasVisibleTask = true;
                             } else {
-                                // 隐藏不匹配的任务（包括任务名称行和拾取物行）
                                 const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
                                 relatedRows.forEach(r => {
                                     r.style.display = 'none';
@@ -1681,28 +1907,37 @@
                     });
                 }
 
-                // 如果配置组没有可见任务，隐藏整个配置组
+                // 如果配置组没有可见任务，隐藏整个配置组（包括队伍角色行）
                 if (groupHasVisibleTask) {
                     container.style.display = '';
                 } else {
                     container.style.display = 'none';
                 }
             });
+
+            // 筛选后调整表头位置
+            setTimeout(() => {
+                adjustTableHeaderPosition();
+            }, 50);
         }
 
-        // 修改移除任務篩選函數，恢復拾取物的顯示
         function removeTaskFilter() {
             const tables = document.querySelectorAll('table');
 
             tables.forEach(table => {
                 const container = table.closest('.group-container');
 
-                // 顯示所有行，包括拾取物行（根據零統計狀態）
+                // 确保队伍角色行显示
+                const teamRolesRow = table.querySelector('.team-roles-row');
+                if (teamRolesRow) {
+                    teamRolesRow.style.display = '';
+                }
+
+                // 显示所有行，包括拾取物行
                 const rows = table.querySelectorAll('tr');
                 rows.forEach(row => {
                     if (!row.querySelector('th')) {
                         if (row.classList.contains('summary-row')) {
-                            // 汇总行：根据hideZeroStatsTasks状态显示
                             row.style.display = hideZeroStatsTasks ? 'none' : '';
                         } else {
                             row.style.display = '';
@@ -1710,14 +1945,14 @@
                     }
                 });
 
-                // 顯示配置組
+                // 显示配置组
                 container.style.display = '';
             });
 
-            // // 重新應用零統計任務隱藏（如果啟用）
-            // if (hideZeroStatsTasks) {
-            //     toggleZeroStatsTasks();
-            // }
+            // 重新调整表头位置
+            setTimeout(() => {
+                adjustTableHeaderPosition();
+            }, 50);
         }
 
         // 顯示篩選提示
@@ -1781,10 +2016,30 @@
                 dropZone.className = 'has-content';
                 dropZone.innerHTML = generateHTML(result);
                 setupCoordPopups();
+                // 设置折叠功能和正确的箭头方向
                 document.querySelectorAll('.group-header').forEach((el, i) => {
+                    const arrow = el.querySelector('.arrow');
+                    const content = document.getElementById(`group-${i}`);
+
+                    // 初始状态：内容展开，箭头向下
+                    el.classList.remove('collapsed');
+                    content.classList.remove('collapsed');
+                    arrow.classList.add('collapsed');
+
                     el.onclick = () => {
-                        el.classList.toggle('collapsed');
-                        document.getElementById(`group-${i}`).classList.toggle('collapsed');
+                        const isCurrentlyCollapsed = el.classList.contains('collapsed');
+
+                        if (isCurrentlyCollapsed) {
+                            // 当前是折叠状态，点击后展开
+                            el.classList.remove('collapsed');
+                            content.classList.remove('collapsed');
+                            arrow.classList.add('collapsed'); // 展开时箭头向下
+                        } else {
+                            // 当前是展开状态，点击后折叠
+                            el.classList.add('collapsed');
+                            content.classList.add('collapsed');
+                            arrow.classList.remove('collapsed'); // 折叠时箭头向右
+                        }
                     };
                 });
 
@@ -1797,9 +2052,9 @@
 
                 // 设置行高亮效果
                 setupRowHighlight();
-                
+
                 // 第二次讀檔時保留各功能状态
-                if(hasLogData = true){
+                if (hasLogData = true) {
                     refreshHTML();
                 }
                 // 标记已有日志数据
@@ -2204,6 +2459,9 @@
                             positionPopup(popup, cell);
                         }
                     }
+                    if (hasLogData) {
+                        adjustTableHeaderPosition();
+                    }
                 });
             });
         }
@@ -2254,7 +2512,8 @@
                         endTime: null,
                         tasks: [],
                         picks: new Map(),
-                        lastActive: null
+                        lastActive: null,
+                        teamRoles: new Set()  // 新增：存储不同的队伍角色组合
                     };
                     group.lastActive = parseTime(prevLine, fileDate);
                     parsingContext.activeGroups.set(groupName, group);
@@ -2277,6 +2536,16 @@
                 // 解析任务
                 const currentGroup = Array.from(parsingContext.activeGroups.values()).pop();
                 if (currentGroup) {
+                    // 识别到的队伍角色
+                    if (line.includes('识别到的队伍角色:"')) {
+                        const match = line.match(/识别到的队伍角色:"(.+?)"/);
+                        if (match && currentGroup) {
+                            const teamRoleStr = match[1];
+                            // 使用Set自动去重
+                            currentGroup.teamRoles.add(teamRoleStr);
+                        }
+                    }
+
                     // 检测自动战斗开始
                     if (line.includes('执行 "自动战斗"')) {
                         battleCount++;
@@ -2386,6 +2655,21 @@
                         }
 
                         // 特殊事件的处理逻辑，使用计数而不是重复添加
+                        // 0. 识别到的队伍角色:".*"
+                        // if (line.includes('识别到的队伍角色:"')) {
+                        //     const match = line.match(/识别到的队伍角色:"(.+?)"/);
+                        //     if (match) {
+                        //         const message = `队伍角色:"${match[1]}"`;
+                        //         const type = 'auto-potion';
+                        //         if (currentTask.specialAlerts.has(message)) {
+                        //             const existing = currentTask.specialAlerts.get(message);
+                        //             existing.count++;
+                        //         } else {
+                        //             currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                        //         }
+                        //     }
+                        // }
+
                         // 1. 开始自动领取派遣任务！
                         if (line.includes("开始自动领取派遣任务！")) {
                             const message = '领取派遣任务';
@@ -2805,26 +3089,48 @@
 
             groups.forEach((group, index) => {
                 html += `
-                <div class="group-container">
-                <div class="group-header" data-group-index="${index}">
-                    <span class="arrow">▶</span>
-            <h2>配置组：${group.name} (${formatDateTime(group.startTime)} - ${group.endTime ? `${formatDateTime(group.endTime)}) <span style="font-size:14px;color:#666;margin-left:10px;">耗时${calculateGroupDuration(group)}</span>` : '进行中)'}</h2>
+            <div class="group-container">
+            <div class="group-header" data-group-index="${index}">
+                <span class="arrow collapsed">▶</span>
+                <div class="header-content">
+                <h2>配置組：${group.name} (${formatDateTime(group.startTime)} - ${group.endTime ? `${formatDateTime(group.endTime)}) <span style="font-size:14px;color:#666;margin-left:10px;">耗时${calculateGroupDuration(group)}</span>` : '进行中)'}</h2>                    
+                </div>
             </div>
             <div class="collapsible" id="group-${index}">
             <table>
-                <tr>
-                    <th data-sort-type="string">任务名称</th>
-                    <th class="column-start-time">开始时间</th>
-                    <th class="column-end-time">结束时间</th>
-                    <th data-sort-type="number">耗时</th>
-                    <th class="column-revive">复活次数</th>
-                    <th class="column-retry">重试次数</th>
-                    <th class="column-retry-detail">疑似卡死</th>
-                    <th class="column-too-far-skip">过远跳过</th>
-                    <th class="column-timeout">战斗超时</th>
-                    <th class="column-teleport">传送失败</th>
-                    <th class="column-picks">拾取物</th>
-                </tr>`;
+                <thead>`;
+
+                // 添加隊伍角色行到thead
+                if (group.teamRoles && group.teamRoles.size > 0) {
+                    html += `
+                    <tr class="team-roles-row">
+                        <td colspan="${useLegacyFormat ? 10 : 11}">
+                            <div class="team-roles-content">
+                                ${Array.from(group.teamRoles).map(roleStr =>
+                        `<div class="team-role-line">队伍角色: ${roleStr}</div>`
+                    ).join('')}
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+
+                // 添加表頭行到thead
+                html += `
+                    <tr class="sticky-header">
+                        <th data-sort-type="string">任务名称</th>
+                        <th class="column-start-time">开始时间</th>
+                        <th class="column-end-time">结束时间</th>
+                        <th data-sort-type="number">耗时</th>
+                        <th class="column-revive">复活次数</th>
+                        <th class="column-retry">重试次数</th>
+                        <th class="column-retry-detail">疑似卡死</th>
+                        <th class="column-too-far-skip">过远跳过</th>
+                        <th class="column-timeout">战斗超时</th>
+                        <th class="column-teleport">传送失败</th>
+                        <th class="column-picks">拾取物</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
                 group.tasks.forEach(task => {
 
@@ -3000,9 +3306,10 @@
                             ${formatPicks(group.picks)}
                         </td>
                     </tr>
-                </table>
-                </div>
-                </div>`;
+                </tbody>
+            </table>
+            </div>
+            </div>`;
             });
 
             html += '</div>';
@@ -3015,15 +3322,32 @@
 
             groups.forEach((group, index) => {
                 html += `
-                <div class="group-container">
-                <div class="group-header" data-group-index="${index}">
-                <span class="arrow">▶</span>
-                <h2>配置组：${group.name} (${formatDateTime(group.startTime)} - ${group.endTime ? `${formatDateTime(group.endTime)}) <span style="font-size:14px;color:#666;margin-left:10px;">耗时${calculateGroupDuration(group)}</span>` : '进行中)'}</h2>
+            <div class="group-container">
+            <div class="group-header" data-group-index="${index}">
+                <span class="arrow collapsed">▶</span>
+                <div class="header-content">
+                <h2>配置組：${group.name} (${formatDateTime(group.startTime)} - ${group.endTime ? `${formatDateTime(group.endTime)}) <span style="font-size:14px;color:#666;margin-left:10px;">耗时${calculateGroupDuration(group)}</span>` : '进行中)'}</h2>
                 </div>
-                <div class="collapsible" id="group-${index}">
-                <div class="sticky-table">
-                <table>
-                    <thead>
+            </div>
+            <div class="collapsible" id="group-${index}">
+            <div class="sticky-table">
+            <table>
+                <thead>`;
+
+                // 添加隊伍角色行到thead
+                if (group.teamRoles && group.teamRoles.size > 0) {
+                    html += `
+                    <tr class="team-roles-row">
+                        <td colspan="${useLegacyFormat ? 10 : 11}">
+                            <div class="team-roles-content">
+                                ${Array.from(group.teamRoles).map(roleStr =>
+                        `<div class="team-role-line">队伍角色: ${roleStr}</div>`
+                    ).join('')}
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+                html += `
                     <tr class="sticky-header">
                         <th data-sort-type="string">任务名称</th>
                         <th class="column-start-time" data-sort-type="date">开始时间</th>
@@ -3036,8 +3360,8 @@
                         <th class="column-timeout" data-sort-type="number">战斗超时</th>
                         <th class="column-teleport" data-sort-type="number">传送失败</th>
                     </tr>
-                    </thead>
-                    <tbody>`;
+                </thead>
+                <tbody>`;
 
                 group.tasks.forEach((task, taskIndex) => {
                     const hasCoords = task.faults.coords && task.faults.coords.length > 0;
@@ -3212,9 +3536,9 @@
                         </td>
                 </tr>
                 </tbody></table>
-                </div>
-                </div>
-                </div>`;
+            </div>
+            </div>
+            </div>`;
             });
 
             html += '</div>';
@@ -3235,18 +3559,22 @@
         }
 
         // 新增折叠功能事件处理
-        function setupCollapse() {
-            document.querySelectorAll('.group-header').forEach(header => {
-                header.addEventListener('click', function () {
-                    const groupIndex = this.dataset.groupIndex;
-                    const content = document.getElementById(`group-${groupIndex}`);
-                    const arrow = this.querySelector('.arrow');
+        document.querySelectorAll('.group-header').forEach((el, i) => {
+            el.onclick = () => {
+                const arrow = el.querySelector('.arrow');
+                const content = document.getElementById(`group-${i}`);
 
-                    content.classList.toggle('collapsed');
-                    arrow.classList.toggle('collapsed');
-                });
-            });
-        }
+                // 切换状态
+                el.classList.toggle('collapsed');
+                content.classList.toggle('collapsed');
+                arrow.classList.toggle('collapsed');
+
+                // 折叠/展开后重新计算表头位置
+                setTimeout(() => {
+                    adjustTableHeaderPosition();
+                }, 50);
+            };
+        });
 
         // 格式化拾取物
         function formatPicks(picks) {
@@ -3353,8 +3681,13 @@
             setupCoordPopups();
             document.querySelectorAll('.group-header').forEach((el, i) => {
                 el.onclick = () => {
+                    const arrow = el.querySelector('.arrow');
+                    const content = document.getElementById(`group-${i}`);
+
+                    // 切换状态
                     el.classList.toggle('collapsed');
-                    document.getElementById(`group-${i}`).classList.toggle('collapsed');
+                    content.classList.toggle('collapsed');
+                    arrow.classList.toggle('collapsed');
                 };
             });
 
@@ -3366,6 +3699,11 @@
 
             // 设置行高亮效果
             setupRowHighlight();
+
+            // 动态调整表头位置 - 添加这行
+            setTimeout(() => {
+                adjustTableHeaderPosition();
+            }, 100); // 延迟100ms确保DOM完全渲染
 
             // 恢复状态
             hideZeroStatsTasks = currentHideZeroStats;
@@ -3380,40 +3718,109 @@
 
             // 应用异常任务显示状态
             if (hideZeroStatsTasks) {
-                // 使用setTimeout确保DOM完全加载
                 setTimeout(() => {
                     if (!isFilterMode) {
                         toggleZeroStatsTasksNormal();
                     }
-                    // 更新按钮状态
                     updateButtonState(74);
                     updateButtonState(72);
                 }, 150);
             }
+
+            // 重新生成HTML后，根据当前模式设置body类名
+            if (isStaticMode) {
+                document.body.classList.add('static-mode');
+            } else {
+                document.body.classList.remove('static-mode');
+            }
+
+            if (isFilterMode) {
+                document.body.classList.add('filter-mode');
+            } else {
+                document.body.classList.remove('filter-mode');
+            }
         }
+
+        // 修改adjustTableHeaderPosition函數
+        function adjustTableHeaderPosition() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const thead = table.querySelector('thead');
+                if (!thead) return;
+
+                // 查找隊伍角色行
+                const teamRolesRow = thead.querySelector('.team-roles-row');
+                const headerRow = thead.querySelector('.sticky-header');
+
+                if (teamRolesRow && headerRow) {
+                    // 計算隊伍角色行的高度
+                    const teamRolesHeight = teamRolesRow.offsetHeight;
+
+                    // 对于新版格式，需要确保表头相对于正确的容器定位
+                    if (!useLegacyFormat) {
+                        // 新版格式：确保表头相对于表格容器定位
+                        const tableContainer = table.closest('.group-container');
+                        if (tableContainer) {
+                            // 设置表头行的top值
+                            headerRow.style.top = (teamRolesHeight - 22) + 'px';
+
+                            // 确保表头th元素也有正确的top值
+                            const headerThs = headerRow.querySelectorAll('th');
+                            headerThs.forEach(th => {
+                                th.style.top = (teamRolesHeight - 22) + 'px';
+                            });
+                        }
+                    } else {
+                        // 舊版格式：保持原有逻辑
+                        headerRow.style.top = (teamRolesHeight - 22) + 'px';
+                        const headerThs = headerRow.querySelectorAll('th');
+                        headerThs.forEach(th => {
+                            th.style.top = (teamRolesHeight - 22) + 'px';
+                        });
+                    }
+                } else if (headerRow) {
+                    // 如果沒有隊伍角色行，表頭固定在頂部
+                    headerRow.style.top = '-22px';
+
+                    if (useLegacyFormat) {
+                        const headerThs = headerRow.querySelectorAll('th');
+                        headerThs.forEach(th => {
+                            th.style.top = '-22px';
+                        });
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('scroll', () => {
+            adjustTableHeaderPosition();
+        });
+
+        // 添加resize事件監聽，確保在窗口大小變化時表頭位置正確
+        window.addEventListener('resize', () => {
+            adjustTableHeaderPosition();
+        });
 
         // 新增：设置行高亮效果
         function setupRowHighlight() {
             const tables = document.querySelectorAll('table');
 
             tables.forEach(table => {
-                // 旧版表格：单行高亮
                 if (!useLegacyFormat) {
-                    const rows = table.querySelectorAll('tr:not(.sticky-header)');
+                    // 新版格式：排除表頭行和隊伍角色行
+                    const rows = table.querySelectorAll('tr:not(.sticky-header):not(.team-roles-row)');
                     rows.forEach(row => {
                         row.addEventListener('mouseenter', () => {
                             row.classList.add('highlighted');
                         });
-
                         row.addEventListener('mouseleave', () => {
                             row.classList.remove('highlighted');
                         });
                     });
-                }
-                // 新版表格：关联行高亮
-                else {
-                    // 为所有行添加事件监听
-                    const rows = table.querySelectorAll('tr');
+                } else {
+                    // 舊版格式：排除表頭行和隊伍角色行
+                    const rows = table.querySelectorAll('tr:not(.sticky-header):not(.team-roles-row)');
                     rows.forEach(row => {
                         row.addEventListener('mouseenter', () => {
                             const taskId = row.getAttribute('data-task-id');
@@ -3422,7 +3829,6 @@
                                 relatedRows.forEach(r => r.classList.add('highlighted'));
                             }
                         });
-
                         row.addEventListener('mouseleave', () => {
                             const taskId = row.getAttribute('data-task-id');
                             if (taskId) {
@@ -3441,7 +3847,7 @@
 
 
 
-           if (keyNum.keyCode == 55) {
+            if (keyNum.keyCode == 55) {
                 // 7 計算原神下次40體時間
                 // 呼叫視窗、要求現在體力
                 var ps = prompt("輸入現在_原神_體力", "");
@@ -3689,7 +4095,12 @@
 
             tables.forEach(table => {
                 const container = table.closest('.group-container');
-                let groupHasVisibleTask = false;
+
+                // 确保队伍角色行始终显示
+                const teamRolesRow = table.querySelector('.team-roles-row');
+                if (teamRolesRow) {
+                    teamRolesRow.style.display = ''; // 确保显示
+                }
 
                 // 确保拾取物行保持隐藏
                 const summaryRows = table.querySelectorAll('.summary-row');
@@ -3697,15 +4108,19 @@
                     row.style.display = 'none';
                 });
 
+                let groupHasVisibleTask = false;
+
                 // 新版格式：直接扫描所有行
                 if (!useLegacyFormat) {
                     const rows = table.querySelectorAll('tr');
 
                     rows.forEach(row => {
-                        // 跳过表头行和summary-row
-                        if (row.querySelector('th') || row.classList.contains('summary-row')) {
-                            return;
-                        }
+                        // 跳过表头行、队伍角色行和summary-row
+                    if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
+                        // 确保这些行显示
+                        row.style.display = '';
+                        return;
+                    }
 
                         // 获取任务名称
                         const taskNameCell = row.querySelector('td:first-child');
@@ -3806,7 +4221,7 @@
                         }
                     });
                 }
-
+                
                 // 如果配置组没有可见任务，隐藏整个配置组
                 if (groupHasVisibleTask) {
                     container.style.display = '';
