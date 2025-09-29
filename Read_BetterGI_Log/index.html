@@ -62,6 +62,10 @@
         配置組增加顯示該組運行時隊伍角色
             隊伍角色與任務資訊始終顯示在頂部
             隊伍角色行在篩選模式與導出模式下置中顯示
+    20250929
+        增加快捷鍵6，計算下次60體力恢復時間
+        增加快捷鍵8，計算下次指定體力恢復時間
+        队伍角色行增加行走位、生存位資訊
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -2501,7 +2505,101 @@
             let lastCoordForStuck = null;  // 用于疑似卡死的坐标跟踪
             let battleCount = 0; // 自动战斗计数器
 
+            // 精细加权系统
+            const WEIGHTS = {
+                SURVIVAL_AFTER_SKILL: 20,       // 生存位技能后的切换 +20
+                NORMAL_SWITCH: 1,               // 一般成功切换角色 +1
+                COLLECTION_SWITCH: -100,        // 采集相关切换 -100（确保排除）
+                MOVEMENT_CONTEXT: 5              // 新增：移动上下文权重 +8
+            };
+
+            // 任务级别的角色统计
+            let survivalWeights = new Map(); //  生存位权重
+            let walkWeights = new Map(); // 行走位权重
+            let lastSwitchedRole = null; // 记录最近切换的角色
+            let pendingSurvivalAction = false; // 标记有生存位动作待处理
+            let nahidaCollect = false; // 纳西妲采集标记
+            let kazuhaCollect = false; // 枫原万叶采集标记
+
+            let currentGroup = null;
+            let currentTask = null;
+
             lines.forEach(line => {
+                // 在每行开始时更新当前组和任务
+                currentGroup = Array.from(parsingContext.activeGroups.values()).pop() || null;
+                if (currentGroup) {
+                    currentTask = currentGroup.tasks.length > 0 ? currentGroup.tasks[currentGroup.tasks.length - 1] : null;
+                } else {
+                    currentTask = null;
+                }
+
+                // 检测采集动作
+                if (line.includes('执行 "纳西妲" 长按E转圈拾取')) {
+                    nahidaCollect = true;
+                } else if (line.includes('使用枫原万叶长E拾取掉落物')) {
+                    kazuhaCollect = true;
+                }
+
+                // 检测生存位技能指令
+                if (line.includes('切换盾、回血角色，使用元素战技')) {
+                    pendingSurvivalAction = true;
+                }
+
+
+                // 检测成功切换角色
+                if (line.includes('成功切换角色:"')) {
+                    const roleMatch = line.match(/成功切换角色:"(.+?)"/);
+                    if (roleMatch && currentGroup && currentTask) {
+                        const roleName = roleMatch[1];
+                        lastSwitchedRole = roleName; // 更新最近切换的角色
+
+                        let survivalWeightToAdd = 0;
+                        let walkWeightToAdd = 0;
+
+                        // 采集相关的切换 - 给负权重确保排除
+                        if (nahidaCollect || kazuhaCollect) {
+                        }
+                        // 生存位技能后的切换 - 高权重
+                        else if (pendingSurvivalAction) {
+                            survivalWeightToAdd = WEIGHTS.SURVIVAL_AFTER_SKILL;
+                            walkWeightToAdd = WEIGHTS.NORMAL_SWITCH; // 同时也计入行走位
+                            pendingSurvivalAction = false;
+                        }
+                        // 一般切换 - 正常权重
+                        else {
+                            walkWeightToAdd = WEIGHTS.NORMAL_SWITCH * 10;
+                        }
+
+                        // 新增：移动上下文权重判断
+                        if (prevLine.includes('到达路径点附近') ||
+                            prevLine.includes('执行 "简易策略脚本"') ||
+                            prevLine.includes('粗略接近途经点') ||
+                            prevLine.includes('精确接近目标点')) {
+                            walkWeightToAdd += WEIGHTS.MOVEMENT_CONTEXT;
+                        }
+
+                        // 新增：交互或拾取后的切换权重 +8
+                        if (prevLine.includes('交互或拾取："')) {
+                            walkWeightToAdd += 8;
+                        }
+
+                        // 更新权重
+                        if (survivalWeightToAdd !== 0) {
+                            const currentSurvivalWeight = survivalWeights.get(roleName) || 0;
+                            survivalWeights.set(roleName, currentSurvivalWeight + survivalWeightToAdd);
+                        }
+
+                        if (walkWeightToAdd !== 0) {
+                            const currentWalkWeight = walkWeights.get(roleName) || 0;
+                            walkWeights.set(roleName, currentWalkWeight + walkWeightToAdd);
+                        }
+
+                        // 重置采集标记
+                        nahidaCollect = false;
+                        kazuhaCollect = false;
+                    }
+                }
+
                 // 解析配置组
                 let match = line.match(/配置组 "(.+?)" 加载完成/);
                 if (match) {
@@ -2520,28 +2618,79 @@
                     battleCount = 0; // 重置战斗计数器
                     lastCoordForRevive = null; // 重置坐标跟踪
                     lastCoordForStuck = null;  // 重置坐标跟踪
+
+                    // 重置角色统计
+                    survivalWeights.clear();
+                    walkWeights.clear();
+                    lastSwitchedRole = null;
+                    pendingSurvivalAction = false;
+                    nahidaCollect = false;
+                    kazuhaCollect = false;
+
+                    // 更新当前组
+                    currentGroup = group;
                 }
 
-                // match = line.match(/→ "任务结束"/);
+                // 配置组结束
                 match = line.match(/配置组 "(.+?)" 执行结束/);
                 if (match) {
                     const group = parsingContext.activeGroups.get(match[1]);
                     if (group) {
                         group.endTime = parseTime(prevLine, fileDate);
+
+                        // 汇总配置组的角色信息
+                        const groupSurvivalRoles = new Map();
+                        const groupWalkRoles = new Map();
+
+                        group.tasks.forEach(task => {
+                            // 汇总生存位 - 只取每个任务的主要生存位
+                            if (task.survivalRoles && task.survivalRoles.length > 0) {
+                                const mainSurvivalRole = task.survivalRoles[0];
+                                const count = groupSurvivalRoles.get(mainSurvivalRole) || 0;
+                                groupSurvivalRoles.set(mainSurvivalRole, count + 1);
+                            }
+
+                            // 汇总行走位 - 只取每个任务的主要行走位
+                            if (task.walkRoles && task.walkRoles.length > 0) {
+                                const mainWalkRole = task.walkRoles[0];
+                                const count = groupWalkRoles.get(mainWalkRole) || 0;
+                                groupWalkRoles.set(mainWalkRole, count + 1);
+                            }
+                        });
+
+                        // 确定最终的配置组角色
+                        // 生存位：取出现次数最多的一个
+                        const sortedSurvival = Array.from(groupSurvivalRoles.entries())
+                            .sort((a, b) => b[1] - a[1]);
+                        group.survivalRoles = sortedSurvival.length > 0 ? [sortedSurvival[0][0]] : [];
+
+                        // 行走位：取出现次数最多的一个
+                        const sortedWalk = Array.from(groupWalkRoles.entries())
+                            .sort((a, b) => b[1] - a[1]);
+                        group.walkRoles = sortedWalk.length > 0 ? [sortedWalk[0][0]] : [];
+
                         parsingContext.allGroups.push(group);
                         parsingContext.activeGroups.delete(match[1]);
+
+                        // 重置全局角色计数
+                        survivalWeights.clear();
+                        walkWeights.clear();
+                        lastSwitchedRole = null;
+                        pendingSurvivalAction = false;
+                        nahidaCollect = false;
+                        kazuhaCollect = false;
+
+                        currentGroup = Array.from(parsingContext.activeGroups.values()).pop() || null;
                     }
                 }
 
                 // 解析任务
-                const currentGroup = Array.from(parsingContext.activeGroups.values()).pop();
                 if (currentGroup) {
                     // 识别到的队伍角色
                     if (line.includes('识别到的队伍角色:"')) {
                         const match = line.match(/识别到的队伍角色:"(.+?)"/);
                         if (match && currentGroup) {
                             const teamRoleStr = match[1];
-                            // 使用Set自动去重
                             currentGroup.teamRoles.add(teamRoleStr);
                         }
                     }
@@ -2578,24 +2727,90 @@
                             reviveEvents: [], // 新增：复活事件
                             timeoutEvents: [], // 新增：超时事件
                             maxBattleCount: 0, // 记录最大战斗次数
-                            specialAlerts: new Map() // 修改：使用Map而不是数组，用于计数特殊事件
+                            specialAlerts: new Map(), // 修改：使用Map而不是数组，用于计数特殊事件
+                            survivalRoles: [], // 新增：生存位角色
+                            walkRoles: []      // 新增：行走位角色
                         };
                         currentGroup.tasks.push(task);
                         parsingContext.activeTasks.set(task.name, task);
-                        battleCount = 0; // 新任务重置战斗计数器
+                        battleCount = 0;
+
+                        // 重置任务级别的角色统计
+                        survivalWeights.clear();
+                        walkWeights.clear();
+                        lastSwitchedRole = null;
+                        pendingSurvivalAction = false;
+                        nahidaCollect = false;
+                        kazuhaCollect = false;
+
+                        // 更新当前任务
+                        currentTask = task;
                     }
 
+                    // 任務結束
                     match = line.match(/→ 脚本执行结束: "(.+?)"/);
                     if (match) {
                         const task = parsingContext.activeTasks.get(match[1]);
                         if (task) {
                             task.endTime = parseTime(prevLine, fileDate);
+
+                            // 任务结束时，如果还有待处理的生存位动作，使用最近切换的角色
+                            if (pendingSurvivalAction && lastSwitchedRole && !nahidaCollect && !kazuhaCollect) {
+                                const currentWeight = survivalWeights.get(lastSwitchedRole) || 0;
+                                survivalWeights.set(lastSwitchedRole, currentWeight + 3); // 中等权重
+                                pendingSurvivalAction = false;
+                            }
+
+                            // 确定生存位：取权重最高的角色（只考虑正权重）
+                            let finalSurvivalRole = null;
+                            if (survivalWeights.size > 0) {
+                                const sortedSurvival = Array.from(survivalWeights.entries())
+                                    .filter(([role, weight]) => weight > 0) // 只考虑正权重
+                                    .sort((a, b) => b[1] - a[1]);
+                                if (sortedSurvival.length > 0) {
+                                    finalSurvivalRole = sortedSurvival[0][0];
+                                }
+                            }
+
+                            // 确定行走位：取权重最高的角色（只考虑正权重）
+                            let finalWalkRole = null;
+                            if (walkWeights.size > 0) {
+                                const sortedWalk = Array.from(walkWeights.entries())
+                                    .filter(([role, weight]) => weight > 0) // 只考虑正权重
+                                    .sort((a, b) => b[1] - a[1]);
+                                if (sortedWalk.length > 0) {
+                                    finalWalkRole = sortedWalk[0][0];
+                                }
+                            }
+
+                            // 保存到任务
+                            task.survivalRoles = finalSurvivalRole ? [finalSurvivalRole] : [];
+                            task.walkRoles = finalWalkRole ? [finalWalkRole] : [];
+
+                            // 调试输出
+                            console.log(`任务 ${task.name} 生存位权重:`, Array.from(survivalWeights.entries()));
+                            console.log(`任务 ${task.name} 行走位权重:`, Array.from(walkWeights.entries()));
+                            console.log(`任务 ${task.name} 最终结果:`, {
+                                survival: task.survivalRoles,
+                                walk: task.walkRoles
+                            });
+
                             parsingContext.activeTasks.delete(task.name);
+
+                            // 重置角色计数
+                            survivalWeights.clear();
+                            walkWeights.clear();
+                            lastSwitchedRole = null;
+                            pendingSurvivalAction = false;
+                            nahidaCollect = false;
+                            kazuhaCollect = false;
+
+                            // 更新当前任务
+                            currentTask = currentGroup.tasks.length > 0 ? currentGroup.tasks[currentGroup.tasks.length - 1] : null;
                         }
                     }
 
                     // 统计信息
-                    const currentTask = currentGroup.tasks[currentGroup.tasks.length - 1];
                     if (currentTask) {
                         // 更新最大战斗次数
                         if (battleCount > currentTask.maxBattleCount) {
@@ -2667,6 +2882,30 @@
                         //         } else {
                         //             currentTask.specialAlerts.set(message, { type: type, count: 1 });
                         //         }
+                        //     }
+                        // }
+                        // test. 
+                        // if (line.includes('成功切换角色:"')) {
+                        //     const match = line.match(/成功切换角色:"(.+?)"/);
+                        //     if (match) {
+                        //         const message = `成功切换角色:"${match[1]}"`;
+                        //         const type = 'auto-potion';
+                        //         if (currentTask.specialAlerts.has(message)) {
+                        //             const existing = currentTask.specialAlerts.get(message);
+                        //             existing.count++;
+                        //         } else {
+                        //             currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                        //         }
+                        //     }
+                        // }
+                        // if (line.includes('切换盾、回血角色，使用元素战技')) {
+                        //     const message = `生存位技能`;
+                        //     const type = 'auto-potion';
+                        //     if (currentTask.specialAlerts.has(message)) {
+                        //         const existing = currentTask.specialAlerts.get(message);
+                        //         existing.count++;
+                        //     } else {
+                        //         currentTask.specialAlerts.set(message, { type: type, count: 1 });
                         //     }
                         // }
 
@@ -3103,15 +3342,47 @@
                 // 添加隊伍角色行到thead
                 if (group.teamRoles && group.teamRoles.size > 0) {
                     html += `
-                    <tr class="team-roles-row">
-                        <td colspan="${useLegacyFormat ? 10 : 11}">
-                            <div class="team-roles-content">
-                                ${Array.from(group.teamRoles).map(roleStr =>
-                        `<div class="team-role-line">队伍角色: ${roleStr}</div>`
-                    ).join('')}
-                            </div>
-                        </td>
-                    </tr>`;
+                        <tr class="team-roles-row">
+                            <td colspan="${useLegacyFormat ? 10 : 11}">
+                                <div class="team-roles-content">
+                                    ${Array.from(group.teamRoles).map(roleStr => {
+                        let displayText = `队伍角色: ${roleStr}`;
+
+                        // 添加角色類型標注
+                        const roleNotes = [];
+
+                        // 檢查行走位
+                        if (group.walkRoles && group.walkRoles.length > 0) {
+                            const walkRoleNames = roleStr.split(',').map(r => r.trim());
+                            const foundWalkRoles = group.walkRoles.filter(walkRole =>
+                                walkRoleNames.includes(walkRole)
+                            );
+                            if (foundWalkRoles.length > 0) {
+                                roleNotes.push(`行走位:${foundWalkRoles.join(',')}`);
+                            }
+                        }
+
+                        // 檢查生存位
+                        if (group.survivalRoles && group.survivalRoles.length > 0) {
+                            const survivalRoleNames = roleStr.split(',').map(r => r.trim());
+                            const foundSurvivalRoles = group.survivalRoles.filter(survivalRole =>
+                                survivalRoleNames.includes(survivalRole)
+                            );
+                            if (foundSurvivalRoles.length > 0) {
+                                roleNotes.push(`生存位:${foundSurvivalRoles.join(',')}`);
+                            }
+                        }
+
+                        // 如果有標注，添加到顯示文本
+                        if (roleNotes.length > 0) {
+                            displayText += `   (${roleNotes.join(' ')})`;
+                        }
+
+                        return `<div class="team-role-line">${displayText}</div>`;
+                    }).join('')}
+                                </div>
+                            </td>
+                        </tr>`;
                 }
 
                 // 添加表頭行到thead
@@ -3337,16 +3608,49 @@
                 // 添加隊伍角色行到thead
                 if (group.teamRoles && group.teamRoles.size > 0) {
                     html += `
-                    <tr class="team-roles-row">
-                        <td colspan="${useLegacyFormat ? 10 : 11}">
-                            <div class="team-roles-content">
-                                ${Array.from(group.teamRoles).map(roleStr =>
-                        `<div class="team-role-line">队伍角色: ${roleStr}</div>`
-                    ).join('')}
-                            </div>
-                        </td>
-                    </tr>`;
+                        <tr class="team-roles-row">
+                            <td colspan="${useLegacyFormat ? 10 : 11}">
+                                <div class="team-roles-content">
+                                    ${Array.from(group.teamRoles).map(roleStr => {
+                        let displayText = `队伍角色: ${roleStr}`;
+
+                        // 添加角色類型標注
+                        const roleNotes = [];
+
+                        // 檢查行走位
+                        if (group.walkRoles && group.walkRoles.length > 0) {
+                            const walkRoleNames = roleStr.split(',').map(r => r.trim());
+                            const foundWalkRoles = group.walkRoles.filter(walkRole =>
+                                walkRoleNames.includes(walkRole)
+                            );
+                            if (foundWalkRoles.length > 0) {
+                                roleNotes.push(`行走位:${foundWalkRoles.join(',')}`);
+                            }
+                        }
+
+                        // 檢查生存位
+                        if (group.survivalRoles && group.survivalRoles.length > 0) {
+                            const survivalRoleNames = roleStr.split(',').map(r => r.trim());
+                            const foundSurvivalRoles = group.survivalRoles.filter(survivalRole =>
+                                survivalRoleNames.includes(survivalRole)
+                            );
+                            if (foundSurvivalRoles.length > 0) {
+                                roleNotes.push(`生存位:${foundSurvivalRoles.join(',')}`);
+                            }
+                        }
+
+                        // 如果有標注，添加到顯示文本
+                        if (roleNotes.length > 0) {
+                            displayText += `   (${roleNotes.join(' ')})`;
+                        }
+
+                        return `<div class="team-role-line">${displayText}</div>`;
+                    }).join('')}
+                                </div>
+                            </td>
+                        </tr>`;
                 }
+
                 html += `
                     <tr class="sticky-header">
                         <th data-sort-type="string">任务名称</th>
@@ -3847,10 +4151,33 @@
 
 
 
-            if (keyNum.keyCode == 55) {
+            if (keyNum.keyCode == 54) {
+                // 6 計算原神下次60體時間
+                // 呼叫視窗、要求現在體力
+                var ps = prompt("計算_原神_下次 60 體力\n輸入現在_原神_體力", "");
+                ps = ps.split(",")
+                // 判定是否數字
+                if (isFinite(ps[0])) {
+                    // 是否有參數次數                        
+                    if (isFinite(ps[1])) {
+                        var endText = "下次_原神_60體力_時間大約為"
+                        for (var i = 0; i < Number(ps[1]); i++) {
+                            endText = endText + "___" + GCSRT(Number(ps[0]), 60 * (i + 1), 8);
+                        }
+                        // 輪出結果
+                        alert(endText);
+                    } else {
+                        alert("下次_原神_60體力_時間大約為___" + GCSRT(Number(ps), 60, 8) + "___" + GCSRT(Number(ps), 120, 8) + "。。。。。。" + GCSRT(Number(ps), 200, 8));
+                    }
+
+                } else {
+                    alert("請輸入數字");
+                }
+
+            } else if (keyNum.keyCode == 55) {
                 // 7 計算原神下次40體時間
                 // 呼叫視窗、要求現在體力
-                var ps = prompt("輸入現在_原神_體力", "");
+                var ps = prompt("計算_原神_下次 40 體力\n輸入現在_原神_體力", "");
                 ps = ps.split(",")
 
                 // 判定是否數字
@@ -3866,6 +4193,18 @@
                     } else {
                         alert("下次_原神_40體力_時間大約為___" + GCSRT(Number(ps), 40, 8) + "___" + GCSRT(Number(ps), 80, 8) + "。。。。。。" + GCSRT(Number(ps), 200, 8));
                     }
+                } else {
+                    alert("請輸入數字");
+                }
+            } else if (keyNum.keyCode == 56) {
+                // 8 計算自訂體力時間
+                // 呼叫視窗、要求現在體力
+                var ps = prompt("輸入現在_要計算體力_的參數\r(現在體力,目標體力,體力cd)", "");
+                //分割為列陣
+                ps = ps.split(",")
+                // 判定是否數字
+                if (isFinite(ps[0]) || isFinite(ps[1]) || isFinite(ps[2])) {
+                    alert("下次_目標體力_時間大約為___" + GCSRT(Number(ps[0]), Number(ps[1]), Number(ps[2])));
                 } else {
                     alert("請輸入數字");
                 }
@@ -3914,7 +4253,7 @@
             } else if (keyNum.keyCode == 103) {
                 // 右7 計算原神下次120體時間
                 // 呼叫視窗、要求現在體力
-                var ps = prompt("輸入現在_原神_體力", "");
+                var ps = prompt("計算_原神_下次 120 體力\n輸入現在_原神_體力", "");
                 ps = ps.split(",")
 
                 // 判定是否數字
@@ -4116,11 +4455,11 @@
 
                     rows.forEach(row => {
                         // 跳过表头行、队伍角色行和summary-row
-                    if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
-                        // 确保这些行显示
-                        row.style.display = '';
-                        return;
-                    }
+                        if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
+                            // 确保这些行显示
+                            row.style.display = '';
+                            return;
+                        }
 
                         // 获取任务名称
                         const taskNameCell = row.querySelector('td:first-child');
@@ -4221,7 +4560,7 @@
                         }
                     });
                 }
-                
+
                 // 如果配置组没有可见任务，隐藏整个配置组
                 if (groupHasVisibleTask) {
                     container.style.display = '';
