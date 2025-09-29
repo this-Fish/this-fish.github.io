@@ -63,10 +63,13 @@
             隊伍角色與任務資訊始終顯示在頂部
             隊伍角色行在篩選模式與導出模式下置中顯示
     20250929
-        增加快捷鍵6，計算下次60體力恢復時間
-        增加快捷鍵8，計算下次指定體力恢復時間
+        增加快捷鍵
+            快捷鍵6，計算下次60體力恢復時間
+            快捷鍵8，計算下次指定體力恢復時間
         队伍角色行增加行走位、生存位資訊
             行走位、生存位資訊(僅供參考)
+        調整部份UI
+            配置組資訊始終顯示在頂部
     -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -134,7 +137,7 @@
             background-color: #888;
             position: sticky;
             /* top: 0; */
-            top: -22px;
+            top: -20px;
             /* 固定在页面顶部 */
             z-index: 1;
             /* 确保表头在内容上方 */
@@ -174,7 +177,7 @@
             display: inline-block;
             margin-right: 10px;
             /* margin-top: 25px; */
-            margin-top: 25px;
+            margin-top: 12.5px;
             /* 与标题文字对齐 */
             transition: transform 0.2s;
             transform: rotate(0deg);
@@ -1175,7 +1178,7 @@
             background-color: #f0f0f0 !important;
             border-bottom: 1px solid #ddd;
             position: sticky;
-            top: -22px;
+            top: -20px;
             z-index: 4;
             font-size: 14px;
         }
@@ -1218,7 +1221,7 @@
 
         /* 对于旧版格式的特殊调整 */
         .legacy-format .team-roles-row {
-            top: -22px;
+            top: -20px;
             /* 统一为0px */
         }
 
@@ -1238,7 +1241,7 @@
             background-color: #888 !important;
             border-bottom: 1px solid #ddd;
             position: sticky;
-            top: -22px;
+            top: -20px;
             /* 固定在頂部，在表頭上方 */
             z-index: 4;
             /* 確保在表頭上方 */
@@ -1255,7 +1258,7 @@
         /* 表头样式 */
         th.sticky-header {
             position: sticky;
-            top: 40;
+            top: 20px;
             /* 初始值為0，由JS動態設置 */
             z-index: 3;
         }
@@ -1269,6 +1272,145 @@
         /* 默认状态 */
         .team-role-line {
             text-align: left;
+        }
+
+        /* 配置组标题固定样式 */
+        .group-header {
+            position: sticky;
+            top: -20px;
+            z-index: 20;
+            background-color: #e7e7e7;
+            margin: 5px 0;
+            transition: background-color 0.3s;
+        }
+
+        /* 暗色主题下的配置组标题固定样式 */
+        body.dark-theme .group-header {
+            background-color: #333;
+        }
+
+        /* 确保配置组标题在折叠状态下也保持固定 */
+        .group-header.collapsed {
+            position: sticky;
+            top: -20px;
+            z-index: 20;
+        }
+
+        /* 调整表头位置，确保在配置组标题下方 */
+        .sticky-header {
+            position: sticky;
+            /* top: 60px; */
+            top: 40px;
+            /* 根据配置组标题高度调整 */
+            z-index: 3;
+        }
+
+        /* 队伍角色行位置调整 */
+        .team-roles-row {
+            position: sticky;
+            /* top: 40px; */
+            top: 20px;
+            /* 在配置组标题下方，表头上方 */
+            z-index: 4;
+        }
+
+        /* 对于旧版格式的特殊调整 */
+        .legacy-format .sticky-header {
+            /* top: 60px; */
+            top: 40px;
+        }
+
+        .legacy-format .team-roles-row {
+            /* top: 40px; */
+            top: 40px;
+        }
+
+        /* 确保配置组标题有足够的视觉层次 */
+        .group-header h2 {
+            margin: 0;
+            padding: 10px 0;
+            font-size: 18px;
+        }
+
+        /* 为配置组容器添加顶部内边距，确保内容不被固定标题遮挡 */
+        .group-container {
+            margin-left: 20px;
+            border-left: 2px solid #dee2e6;
+            padding-left: 10px;
+            position: relative;
+        }
+
+        /* 当有多个配置组时，确保后续配置组标题能够正确推走前一个 */
+        .group-container:not(:first-child) .group-header {
+            top: -20px;
+            /* 所有配置组标题都固定在页面顶部，滚动时会依次替换 */
+        }
+
+        /* 为配置组标题添加阴影，增强视觉层次 */
+        .group-header {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        body.dark-theme .group-header {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 旧版格式的配置组标题固定样式 */
+        .legacy-format .group-header {
+            position: sticky;
+            top: -20px;
+            z-index: 20;
+            background-color: #e7e7e7;
+            margin: 5px 0;
+            transition: background-color 0.3s;
+        }
+
+        /* 暗色主题下的旧版格式配置组标题固定样式 */
+        body.dark-theme .legacy-format .group-header {
+            background-color: #333;
+        }
+
+        /* 确保旧版格式配置组标题在折叠状态下也保持固定 */
+        .legacy-format .group-header.collapsed {
+            position: sticky;
+            top: -20px;
+            z-index: 20;
+        }
+
+        /* 调整旧版格式表头位置，确保在配置组标题下方 */
+        .legacy-format .sticky-header {
+            position: sticky;
+            /* top: 60px; */
+            top: 40px;
+            /* 根据配置组标题高度调整 */
+            z-index: 3;
+        }
+
+        /* 旧版格式队伍角色行位置调整 */
+        .legacy-format .team-roles-row {
+            position: sticky;
+            top: 20px;
+            /* 在配置组标题下方，表头上方 */
+            z-index: 4;
+        }
+
+        /* 为旧版格式配置组标题添加阴影，增强视觉层次 */
+        .legacy-format .group-header {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        body.dark-theme .legacy-format .group-header {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 确保旧版格式配置组容器有足够的顶部内边距 */
+        .legacy-format .group-container {
+            margin-left: 20px;
+            border-left: 2px solid #dee2e6;
+            padding-left: 10px;
+            position: relative;
         }
     </style>
 </head>
@@ -1683,7 +1825,12 @@
                         // 切换状态
                         el.classList.toggle('collapsed');
                         content.classList.toggle('collapsed');
-                        arrow.classList.toggle('collapsed'); // 切换箭头方向
+                        arrow.classList.toggle('collapsed');
+
+                        // 折叠/展开后重新计算表头位置
+                        setTimeout(() => {
+                            adjustTableHeaderPosition();
+                        }, 50);
                     };
                 });
 
@@ -3993,6 +4140,11 @@
                     el.classList.toggle('collapsed');
                     content.classList.toggle('collapsed');
                     arrow.classList.toggle('collapsed');
+
+                    // 折叠/展开后重新计算表头位置
+                    setTimeout(() => {
+                        adjustTableHeaderPosition();
+                    }, 50);
                 };
             });
 
@@ -4046,7 +4198,7 @@
             }
         }
 
-        // 修改adjustTableHeaderPosition函數
+        // 修改adjustTableHeaderPosition函数
         function adjustTableHeaderPosition() {
             const tables = document.querySelectorAll('table');
 
@@ -4054,44 +4206,40 @@
                 const thead = table.querySelector('thead');
                 if (!thead) return;
 
+                // 查找配置组标题
+                const groupContainer = table.closest('.group-container');
+                const groupHeader = groupContainer ? groupContainer.querySelector('.group-header') : null;
+                const groupHeaderHeight = groupHeader ? groupHeader.offsetHeight : 0;
+
                 // 查找隊伍角色行
                 const teamRolesRow = thead.querySelector('.team-roles-row');
                 const headerRow = thead.querySelector('.sticky-header');
+
+                if (teamRolesRow) {
+                    // 设置队伍角色行的top值为配置组标题高度
+                    teamRolesRow.style.top = groupHeaderHeight - 20 + 'px';
+                }
 
                 if (teamRolesRow && headerRow) {
                     // 計算隊伍角色行的高度
                     const teamRolesHeight = teamRolesRow.offsetHeight;
 
-                    // 对于新版格式，需要确保表头相对于正确的容器定位
-                    if (!useLegacyFormat) {
-                        // 新版格式：确保表头相对于表格容器定位
-                        const tableContainer = table.closest('.group-container');
-                        if (tableContainer) {
-                            // 设置表头行的top值
-                            headerRow.style.top = (teamRolesHeight - 22) + 'px';
+                    // 设置表头行的top值：配置组标题高度 + 隊伍角色行高度
+                    headerRow.style.top = (groupHeaderHeight + teamRolesHeight - 20) + 'px';
 
-                            // 确保表头th元素也有正确的top值
-                            const headerThs = headerRow.querySelectorAll('th');
-                            headerThs.forEach(th => {
-                                th.style.top = (teamRolesHeight - 22) + 'px';
-                            });
-                        }
-                    } else {
-                        // 舊版格式：保持原有逻辑
-                        headerRow.style.top = (teamRolesHeight - 22) + 'px';
-                        const headerThs = headerRow.querySelectorAll('th');
-                        headerThs.forEach(th => {
-                            th.style.top = (teamRolesHeight - 22) + 'px';
-                        });
-                    }
+                    // 确保表头th元素也有正确的top值
+                    const headerThs = headerRow.querySelectorAll('th');
+                    headerThs.forEach(th => {
+                        th.style.top = (groupHeaderHeight + teamRolesHeight - 20) + 'px';
+                    });
                 } else if (headerRow) {
-                    // 如果沒有隊伍角色行，表頭固定在頂部
-                    headerRow.style.top = '-22px';
+                    // 如果没有队伍角色行，表头固定在配置组标题下方
+                    headerRow.style.top = groupHeaderHeight - 20 + 'px';
 
                     if (useLegacyFormat) {
                         const headerThs = headerRow.querySelectorAll('th');
                         headerThs.forEach(th => {
-                            th.style.top = '-22px';
+                            th.style.top = groupHeaderHeight - 20 + 'px';
                         });
                     }
                 }
@@ -4149,8 +4297,6 @@
         // 監聽鍵盤按下
         document.onkeydown = function (e) {
             var keyNum = e;       // // 使用事件对象而不是 window.event
-
-
 
             if (keyNum.keyCode == 54) {
                 // 6 計算原神下次60體時間
