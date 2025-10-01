@@ -85,7 +85,11 @@
             配置组名匹配 → 显示整个配置组
             配置组名不匹配但有任务匹配 → 显示配置组+匹配的任务
             配置组名和任务都不匹配 → 隐藏整个配置组
-    -->
+    20251001
+        修正 筛选模式配置组名匹配時，沒有隱藏 整組都是0異常的配置組
+        修正 筛选模式配置组名匹配時，舊版UI沒有隱藏0異常任務行的的拾取物
+        條正 筛选模式時+只显示異常任務行，切換表格格式後沒有只显示 筛选關鍵字匹配的異常任務行
+-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3026,12 +3030,12 @@
                             task.walkRoles = finalWalkRole ? [finalWalkRole] : [];
 
                             // 调试输出
-                            console.log(`任务 ${task.name} 生存位权重:`, Array.from(survivalWeights.entries()));
-                            console.log(`任务 ${task.name} 行走位权重:`, Array.from(walkWeights.entries()));
-                            console.log(`任务 ${task.name} 最终结果:`, {
-                                survival: task.survivalRoles,
-                                walk: task.walkRoles
-                            });
+                            // console.log(`任务 ${task.name} 生存位权重:`, Array.from(survivalWeights.entries()));
+                            // console.log(`任务 ${task.name} 行走位权重:`, Array.from(walkWeights.entries()));
+                            // console.log(`任务 ${task.name} 最终结果:`, {
+                            //     survival: task.survivalRoles,
+                            //     walk: task.walkRoles
+                            // });
 
                             parsingContext.activeTasks.delete(task.name);
 
@@ -3109,6 +3113,7 @@
 
                         // 特殊事件的处理逻辑，使用计数而不是重复添加
                         // 0. 识别到的队伍角色:".*"
+                        // test. 測試用例子
                         // if (line.includes('识别到的队伍角色:"')) {
                         //     const match = line.match(/识别到的队伍角色:"(.+?)"/);
                         //     if (match) {
@@ -3122,7 +3127,6 @@
                         //         }
                         //     }
                         // }
-                        // test. 
                         // if (line.includes('成功切换角色:"')) {
                         //     const match = line.match(/成功切换角色:"(.+?)"/);
                         //     if (match) {
@@ -4331,6 +4335,9 @@
                 setTimeout(() => {
                     if (!isFilterMode) {
                         toggleZeroStatsTasksNormal();
+                    } else {
+                        // 在筛选模式下应用零统计筛选
+                        toggleZeroStatsTasksInFilterMode();
                     }
                     updateButtonState(74);
                     updateButtonState(72);
@@ -4520,6 +4527,7 @@
         // 監聽鍵盤按下
         document.onkeydown = function (e) {
             var keyNum = e;       // // 使用事件对象而不是 window.event
+
             if (keyNum.keyCode == 54) {
                 // 6 計算原神下次60體時間
                 // 呼叫視窗、要求現在體力
@@ -4689,7 +4697,7 @@
                 updateStatsColumnsVisibility();
                 showStatsToggleIndicator();
                 e.preventDefault(); // 阻止默认行为
-            } else if (keyNum.keyCode == 85) { // U键 - 切换表格格式
+            } else if (keyNum.keyCode == 85) { // U 键 - 切换表格格式
                 // 检查是否有日志数据
                 if (!hasLogData) {
                     e.preventDefault();
@@ -4800,6 +4808,8 @@
             }
 
             showZeroStatsToggleIndicator();
+            // 更新按钮状态
+            updateButtonState(74);
         }
 
         // 修改筛选模式下的零统计筛选函数
@@ -4831,51 +4841,106 @@
                 );
 
                 // 如果配置组名匹配，检查组内任务并根据统计列筛选
+                // (需要對舊版UI格做特殊處理)
                 if (groupMatchesKeyword) {
-                    // 显示所有非零统计任务
-                    const rows = table.querySelectorAll('tr');
-                    rows.forEach(row => {
-                        // 跳过表头行、队伍角色行和summary-row
-                        if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
-                            // 确保这些行显示，但summary-row保持隐藏
-                            if (row.classList.contains('summary-row')) {
-                                row.style.display = 'none';
-                            } else {
+
+                    if (!useLegacyFormat) {
+
+                        // 显示所有非零统计任务
+                        const rows = table.querySelectorAll('tr');
+                        rows.forEach(row => {
+                            // 跳过表头行、队伍角色行和summary-row
+                            if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
+                                // 确保这些行显示，但summary-row保持隐藏
+                                if (row.classList.contains('summary-row')) {
+                                    row.style.display = 'none';
+                                } else {
+                                    row.style.display = '';
+                                }
+                                return;
+                            }
+
+                            // 检查统计列是否非零
+                            let matchesStats = true;
+                            if (hideZeroStatsTasks) {
+                                const reviveCell = row.querySelector('.column-revive');
+                                const retryCell = row.querySelector('.column-retry');
+                                const retryDetailCell = row.querySelector('.column-retry-detail');
+                                const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                                const timeoutCell = row.querySelector('.column-timeout');
+                                const teleportCell = row.querySelector('.column-teleport');
+
+                                if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                                    const isAllZero =
+                                        (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                                        (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                                        (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                                        (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                                        (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                                        (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                                    matchesStats = !isAllZero;
+                                }
+                            }
+
+                            if (matchesStats) {
                                 row.style.display = '';
+                                groupHasVisibleTask = true;
+                            } else {
+                                row.style.display = 'none';
                             }
-                            return;
-                        }
+                        });
+                    } else if (useLegacyFormat) {
+                        // 旧版格式
+                        const taskNameRows = table.querySelectorAll('tr .main-row-name');
 
-                        // 检查统计列是否非零
-                        let matchesStats = true;
-                        if (hideZeroStatsTasks) {
-                            const reviveCell = row.querySelector('.column-revive');
-                            const retryCell = row.querySelector('.column-retry');
-                            const retryDetailCell = row.querySelector('.column-retry-detail');
-                            const tooFarSkipCell = row.querySelector('.column-too-far-skip');
-                            const timeoutCell = row.querySelector('.column-timeout');
-                            const teleportCell = row.querySelector('.column-teleport');
+                        taskNameRows.forEach(taskNameCell => {
+                            const row = taskNameCell.closest('tr');
+                            const taskId = row.getAttribute('data-task-id');
 
-                            if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
-                                const isAllZero =
-                                    (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
-                                    (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
-                                    (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
-                                    (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
-                                    (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
-                                    (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+                            if (taskId) {
+                                // 检查统计列是否非零
+                                let matchesStats = true;
+                                if (hideZeroStatsTasks) {
+                                    const reviveCell = row.querySelector('.column-revive');
+                                    const retryCell = row.querySelector('.column-retry');
+                                    const retryDetailCell = row.querySelector('.column-retry-detail');
+                                    const tooFarSkipCell = row.querySelector('.column-too-far-skip');
+                                    const timeoutCell = row.querySelector('.column-timeout');
+                                    const teleportCell = row.querySelector('.column-teleport');
 
-                                matchesStats = !isAllZero;
+                                    if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                                        const isAllZero =
+                                            (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                                            (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
+                                            (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
+                                            (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
+                                            (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
+                                            (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                                        matchesStats = !isAllZero;
+                                    }
+                                }
+
+                                if (matchesStats) {
+                                    const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                    relatedRows.forEach(r => {
+                                        // 跳过summary-row
+                                        if (!r.classList.contains('summary-row')) {
+                                            r.style.display = '';
+                                        }
+                                    });
+                                    groupHasVisibleTask = true;
+                                } else {
+                                    const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
+                                    relatedRows.forEach(r => {
+                                        r.style.display = 'none';
+                                    });
+                                }
                             }
-                        }
+                        });
+                    }
 
-                        if (matchesStats) {
-                            row.style.display = '';
-                            groupHasVisibleTask = true;
-                        } else {
-                            row.style.display = 'none';
-                        }
-                    });
                 }
                 // 如果配置组名不匹配，检查组内任务
                 else {
@@ -4997,7 +5062,7 @@
                 }
 
                 // 如果配置组没有可见任务且处于隐藏模式，隐藏整个配置组
-                if (hideZeroStatsTasks && !groupHasVisibleTask && !groupMatchesKeyword) {
+                if (hideZeroStatsTasks && !groupHasVisibleTask) {
                     container.style.display = 'none';
                 } else {
                     container.style.display = '';
