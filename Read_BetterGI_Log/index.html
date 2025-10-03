@@ -89,6 +89,9 @@
         修正 筛选模式配置组名匹配時，沒有隱藏 整組都是0異常的配置組
         修正 筛选模式配置组名匹配時，舊版UI沒有隱藏0異常任務行的的拾取物
         條正 筛选模式時+只显示異常任務行，切換表格格式後沒有只显示 筛选關鍵字匹配的異常任務行
+    20251003
+        增加錯誤&其他訊息
+            调度器任务出现未预期的异常，自动重启bgi
 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -3343,6 +3346,18 @@
                         // 16. 执行地图追踪时候发生错误: "未能返回主界面"
                         if (line.includes('执行地图追踪时候发生错误: "未能返回主界面"')) {
                             const message = '未能返回主界面';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 17. 调度器任务出现未预期的异常，自动重启bgi
+                        if (line.includes('调度器任务出现未预期的异常，自动重启bgi')) {
+                            const message = '自动重启bgi';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
