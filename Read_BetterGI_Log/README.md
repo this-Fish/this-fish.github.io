@@ -32,6 +32,8 @@
  - BetterGI日志文件所在位置如下
    - C:\你BGI所安裝的目錄\BetterGI\log
    - 或使用BGI打開目錄
+   - <img width="905" height="599" alt="QQ_1759765939508" src="https://github.com/user-attachments/assets/615087a5-eead-4eb8-8028-4bfe74d9b8ff" />
+
 3. **查看分析** - 工具自动解析并显示统计信息
 
 ### 移动设备使用
