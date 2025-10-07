@@ -94,7 +94,10 @@
             调度器任务出现未预期的异常，自动重启bgi
     20251006
         增加錯誤&其他訊息
-        当前获取焦点的窗口不是原神，暂停
+            当前获取焦点的窗口不是原神，暂停
+    20251007
+        補充錯誤信息
+            補充地圖追蹤路径文件丢失的判斷
 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -3194,7 +3197,7 @@
                         }
 
                         // 4. 文件找不到
-                        if (line.includes('"Could not find file')) {
+                        if (line.includes('"Could not find file') || line.includes('"Could not find a part of the path')) {
                             const message = '路径文件丢失';
                             const type = 'file-missing';
                             if (currentTask.specialAlerts.has(message)) {
