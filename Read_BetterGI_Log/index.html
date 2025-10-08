@@ -1857,8 +1857,13 @@
             // 添加filter-mode类到body
             document.body.classList.add('filter-mode');
 
-            // 應用篩選
+            //应用筛选
             applyTaskFilter();
+
+            // 如果零统计隐藏已启用，额外应用零统计筛选
+            if (hideZeroStatsTasks) {
+                toggleZeroStatsTasksInFilterMode();
+            }
 
             // 顯示篩選提示
             showFilterIndicator();
@@ -3312,10 +3317,10 @@
         function getFileNameWithoutExtension(fullPath) {
             // 先提取文件名（不含路径）
             const fileName = fullPath.split('\\').pop(); // 按反斜杠分割取最后一部分
-            
+
             // 再去掉扩展名
             const nameWithoutExt = fileName.replace(/\.\w+$/, '');
-            
+
             return nameWithoutExt;
         }
 
