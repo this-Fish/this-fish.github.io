@@ -2860,7 +2860,7 @@
                     match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|开始购买NPC: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
                     if (match) {
                         // const taskName = match[1] || match[2] || match[3] || match[4];
-                        const taskName = (match[1] || match[2] || match[3] || match[4] || match[5]).split('\\').pop().replace(/\.\w+$/, '');
+                        const taskName = match[1] || match[2] || match[3] || match[4] || match[5];
                         const task = {
                             name: taskName,
                             startTime: parseTime(prevLine, fileDate),
@@ -3308,6 +3308,17 @@
             });
         }
 
+        // 清理任务名称：提取纯文件名（不含路径和扩展名）
+        function getFileNameWithoutExtension(fullPath) {
+            // 先提取文件名（不含路径）
+            const fileName = fullPath.split('\\').pop(); // 按反斜杠分割取最后一部分
+            
+            // 再去掉扩展名
+            const nameWithoutExt = fileName.replace(/\.\w+$/, '');
+            
+            return nameWithoutExt;
+        }
+
         function finalizeParsing() {
             // 处理未完成任务
             parsingContext.activeTasks.forEach(task => {
@@ -3721,7 +3732,7 @@
 
                     html += `
                 <tr>
-                    <td class="${shouldHighlight ? 'task-name-red' : ''}">${task.name}</td>
+                    <td class="${shouldHighlight ? 'task-name-red' : ''}">${getFileNameWithoutExtension(task.name)}</td>
                     <td class="column-start-time">${formatDateTime(task.startTime)}</td>
                     <td class="column-end-time">${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
                     <td class="${shouldHighlight ? 'duration-red' : ''}">${duration}</td>
@@ -3982,7 +3993,7 @@
 
                     html += `
                 <tr data-task-id="group-${index}-task-${taskIndex}">
-                    <td class="main-row-name ${shouldHighlight ? 'task-name-red' : ''}" rowspan="2">${task.name}</td>
+                    <td class="main-row-name ${shouldHighlight ? 'task-name-red' : ''}" rowspan="2">${getFileNameWithoutExtension(task.name)}</td>
                     <td class="column-start-time">${formatDateTime(task.startTime)}</td>
                     <td class="column-end-time">${task.endTime ? formatDateTime(task.endTime) : '进行中'}</td>
                     <td class="${shouldHighlight ? 'duration-red' : ''}">${duration}</td>
