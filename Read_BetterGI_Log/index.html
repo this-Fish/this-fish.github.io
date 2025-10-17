@@ -2691,7 +2691,8 @@
                 // 检测采集动作
                 if (line.includes('执行 "纳西妲" 长按E转圈拾取')) {
                     nahidaCollect = true;
-                } else if (line.includes('使用枫原万叶长E拾取掉落物')) {
+                } else if (line.includes('使用枫原万叶长E拾取掉落物') || line.includes('使用 枫原万叶-长E 拾取掉落物') || line.includes('使用 琴-长E 拾取掉落物')) {
+                    // 配置0.52 战后琴拾取 聚材料命令 關鍵字更改來排除採集動作
                     kazuhaCollect = true;
                 }
 
@@ -3280,6 +3281,18 @@
                         // 17. 调度器任务出现未预期的异常，自动重启bgi
                         if (line.includes('调度器任务出现未预期的异常，自动重启bgi')) {
                             const message = '自动重启bgi';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 18. 调度器任务出现未预期的异常，自动重启bgi
+                        if (line.includes('任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！')) {
+                            const message = '任务启动失败';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
