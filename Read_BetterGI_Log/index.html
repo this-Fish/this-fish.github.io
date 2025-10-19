@@ -3019,7 +3019,8 @@
                             currentTask.faults.too_far_skip++;
 
                         // 战斗超时事件
-                        if (line.includes("战斗超时")) {
+                        // if (line.includes("战斗超时")) {
+                        if (line.includes("战斗超时结束") || line.includes("旋转次数达到上限，战斗结束")) {
                             currentTask.faults.timeout++;
                             // 记录超时事件对应的战斗序号
                             currentTask.timeoutEvents.push(battleCount);
