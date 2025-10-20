@@ -99,6 +99,11 @@
             font-weight: bold;
         }
 
+        .purple-alert {
+            color: #8c8cff;
+            font-weight: bold;
+        }
+
         .strategy-error {
             color: red;
             font-weight: bold;
@@ -3046,6 +3051,21 @@
                                 existing.count++;
                             } else {
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 19. 简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：".*"
+                        if (line.includes('简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个："')) {
+                            const match = line.match(/简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个："(.+?)"/);
+                            if (match) {
+                                const message = `缺少脚本指定角色："${match[1]}"`;
+                                const type = 'purple-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
                             }
                         }
 
