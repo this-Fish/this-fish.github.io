@@ -923,7 +923,7 @@
         }
 
         /* 移动设备响应式 */
-        @media (max-width: 768px),
+        @media (max-width: 0px),
         (pointer: coarse) {
             body {
                 text-size-adjust: none;
@@ -949,7 +949,7 @@
             }
 
             #fileUploadContainer {
-                display: block !important;
+                display: block;
             }
 
             #mobileControls {
@@ -1058,6 +1058,11 @@
         .quick-nav-search {
             flex-shrink: 0;
         }
+
+        /* 确保两个输入框之间有适当间距 */
+        #quickNavExclude {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 
@@ -1124,6 +1129,8 @@
     <div class="quick-nav" id="quickNav">
         <div class="quick-nav-header">配置组导航</div>
         <input type="text" class="quick-nav-search" id="quickNavSearch" placeholder="搜索配置组...">
+        <!-- 新增排除输入框 -->
+        <input type="text" class="quick-nav-search" id="quickNavExclude" placeholder="排除配置组...">
         <div id="quickNavItems"></div>
     </div>
 
@@ -1147,6 +1154,7 @@
         let isAdjustingTableHeader = false;
         let lastAdjustmentTime = 0;
         const ADJUSTMENT_THROTTLE = 100; // 100ms节流
+        let currentExcludeText = ''; // 保存当前的排除文本
 
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
@@ -2545,36 +2553,50 @@
                     if (group) {
                         group.endTime = parseTime(prevLine, fileDate);
 
-                        // 汇总配置组的角色信息
-                        const groupSurvivalRoles = new Map();
-                        const groupWalkRoles = new Map();
-
+                        // 检查配置组是否只有跳过的任务
+                        let hasValidTasks = false;
                         group.tasks.forEach(task => {
-                            // 汇总生存位 - 只取每个任务的主要生存位
-                            if (task.survivalRoles && task.survivalRoles.length > 0) {
-                                const mainSurvivalRole = task.survivalRoles[0];
-                                const count = groupSurvivalRoles.get(mainSurvivalRole) || 0;
-                                groupSurvivalRoles.set(mainSurvivalRole, count + 1);
-                            }
-
-                            // 汇总行走位 - 只取每个任务的主要行走位
-                            if (task.walkRoles && task.walkRoles.length > 0) {
-                                const mainWalkRole = task.walkRoles[0];
-                                const count = groupWalkRoles.get(mainWalkRole) || 0;
-                                groupWalkRoles.set(mainWalkRole, count + 1);
+                            // 检查任务是否有实际执行内容
+                            if (hasTaskActualContent(task)) {
+                                hasValidTasks = true;
                             }
                         });
 
-                        // 确定最终的配置组角色
-                        // 生存位：取出现次数最多的一个
-                        const sortedSurvival = Array.from(groupSurvivalRoles.entries())
-                            .sort((a, b) => b[1] - a[1]);
-                        group.survivalRoles = sortedSurvival.length > 0 ? [sortedSurvival[0][0]] : [];
+                        // 如果没有有效任务，标记为跳过
+                        if (!hasValidTasks) {
+                            group.skipped = true;
+                        } else {
+                            // 汇总配置组的角色信息
+                            const groupSurvivalRoles = new Map();
+                            const groupWalkRoles = new Map();
 
-                        // 行走位：取出现次数最多的一个
-                        const sortedWalk = Array.from(groupWalkRoles.entries())
-                            .sort((a, b) => b[1] - a[1]);
-                        group.walkRoles = sortedWalk.length > 0 ? [sortedWalk[0][0]] : [];
+                            group.tasks.forEach(task => {
+                                // 汇总生存位 - 只取每个任务的主要生存位
+                                if (task.survivalRoles && task.survivalRoles.length > 0) {
+                                    const mainSurvivalRole = task.survivalRoles[0];
+                                    const count = groupSurvivalRoles.get(mainSurvivalRole) || 0;
+                                    groupSurvivalRoles.set(mainSurvivalRole, count + 1);
+                                }
+
+                                // 汇总行走位 - 只取每个任务的主要行走位
+                                if (task.walkRoles && task.walkRoles.length > 0) {
+                                    const mainWalkRole = task.walkRoles[0];
+                                    const count = groupWalkRoles.get(mainWalkRole) || 0;
+                                    groupWalkRoles.set(mainWalkRole, count + 1);
+                                }
+                            });
+
+                            // 确定最终的配置组角色
+                            // 生存位：取出现次数最多的一个
+                            const sortedSurvival = Array.from(groupSurvivalRoles.entries())
+                                .sort((a, b) => b[1] - a[1]);
+                            group.survivalRoles = sortedSurvival.length > 0 ? [sortedSurvival[0][0]] : [];
+
+                            // 行走位：取出现次数最多的一个
+                            const sortedWalk = Array.from(groupWalkRoles.entries())
+                                .sort((a, b) => b[1] - a[1]);
+                            group.walkRoles = sortedWalk.length > 0 ? [sortedWalk[0][0]] : [];
+                        }
 
                         parsingContext.allGroups.push(group);
                         parsingContext.activeGroups.delete(match[1]);
@@ -2636,7 +2658,8 @@
                             maxBattleCount: 0, // 记录最大战斗次数
                             specialAlerts: new Map(), // 修改：使用Map而不是数组，用于计数特殊事件
                             survivalRoles: [], // 新增：生存位角色
-                            walkRoles: []      // 新增：行走位角色
+                            walkRoles: [],      // 新增：行走位角色
+                            skipped: false // 新增跳过标记
                         };
                         currentGroup.tasks.push(task);
                         parsingContext.activeTasks.set(task.name, task);
@@ -2719,6 +2742,20 @@
 
                     // 统计信息
                     if (currentTask) {
+                        // 检测任务跳过信息
+                        if (line.includes("任务已到禁止执行时段，将跳过")) {
+                            currentTask.skipped = true;
+                            // 记录跳过信息到特殊事件
+                            // const message = line.trim();
+                            // const type = 'abnormal-alert';
+                            // if (currentTask.specialAlerts.has(message)) {
+                            //     const existing = currentTask.specialAlerts.get(message);
+                            //     existing.count++;
+                            // } else {
+                            //     currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            // }
+                        }
+
                         // 更新最大战斗次数
                         if (battleCount > currentTask.maxBattleCount) {
                             currentTask.maxBattleCount = battleCount;
@@ -3042,7 +3079,7 @@
                             }
                         }
 
-                        // 18. 调度器任务出现未预期的异常，自动重启bgi
+                        // 18. 任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！
                         if (line.includes('任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！')) {
                             const message = '任务启动失败';
                             const type = 'abnormal-alert';
@@ -3099,11 +3136,52 @@
             const fileName = fullPath.split('\\').pop(); // 按反斜杠分割取最后一部分
 
             // 再去掉扩展名
-            const nameWithoutExt = fileName.replace(/\.\w+$/, '');
+            // const nameWithoutExt = fileName.replace(/\.\w+$/, '');
+            // 只移除特定的扩展名，如 .json
+            const nameWithoutExt = fileName.replace(/\.(json|txt|xml|jpg|png)$/i, '');
 
             return nameWithoutExt;
         }
 
+        // 新增函数：检查任务是否有实际执行内容
+        function hasTaskActualContent(task) {
+            // 如果有任何统计信息不为0，说明有实际执行
+            if (task.faults.revive > 0 ||
+                task.faults.teleport > 0 ||
+                task.faults.retry > 0 ||
+                task.faults.retryDetail > 0 ||
+                task.faults.too_far_skip > 0 ||
+                task.faults.timeout > 0) {
+                return true;
+            }
+
+            // 如果有拾取物，说明有实际执行
+            if (task.picks && task.picks.size > 0) {
+                return true;
+            }
+
+            // 如果有特殊事件（除了跳过相关的），说明有实际执行
+            if (task.specialAlerts && task.specialAlerts.size > 0) {
+                for (let [message, alertInfo] of task.specialAlerts) {
+                    // 排除跳过相关的消息
+                    if (!message.includes('跳过') && !message.includes('禁止执行时段')) {
+                        return true;
+                    }
+                }
+            }
+
+            // 如果任务持续时间超过很短的时间（比如10秒），说明可能有实际执行
+            if (task.startTime && task.endTime) {
+                const duration = (task.endTime.getTime() - task.startTime.getTime()) / 1000;
+                if (duration > 10) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // 在 finalizeParsing 函数中过滤掉跳过的配置组
         function finalizeParsing() {
             // 处理未完成任务
             parsingContext.activeTasks.forEach(task => {
@@ -3115,8 +3193,24 @@
                 group.endTime = group.tasks.length > 0
                     ? group.tasks[group.tasks.length - 1].startTime
                     : group.startTime;
+
+                // 检查配置组是否只有跳过的任务
+                let hasValidTasks = false;
+                group.tasks.forEach(task => {
+                    if (hasTaskActualContent(task)) {
+                        hasValidTasks = true;
+                    }
+                });
+
+                if (!hasValidTasks) {
+                    group.skipped = true;
+                }
+
                 parsingContext.allGroups.push(group);
             });
+
+            // 过滤掉跳过的配置组
+            parsingContext.allGroups = parsingContext.allGroups.filter(group => !group.skipped);
 
             return parsingContext.allGroups.sort((a, b) =>
                 (b.endTime || b.startTime) - (a.endTime || a.startTime)
@@ -5305,8 +5399,18 @@
             const quickNavToggle = document.getElementById('quickNavToggle');
             const quickNav = document.getElementById('quickNav');
             const quickNavSearch = document.getElementById('quickNavSearch');
+            const quickNavExclude = document.getElementById('quickNavExclude'); // 新增
 
             if (!quickNavToggle || !quickNav) return;
+
+            // 设置输入框的placeholder提示
+            if (quickNavSearch) {
+                quickNavSearch.placeholder = "搜索配置组... (多个关键词用,分割)";
+            }
+
+            if (quickNavExclude) {
+                quickNavExclude.placeholder = "排除配置组... (多个关键词用,分割)";
+            }
 
             // 切换按钮点击事件
             quickNavToggle.addEventListener('click', function (e) {
@@ -5316,20 +5420,33 @@
 
             // 搜索功能
             if (quickNavSearch) {
-                // 阻止搜索框的键盘事件冒泡，避免触发快捷键
                 quickNavSearch.addEventListener('keydown', function (e) {
-                    e.stopPropagation(); // 阻止事件冒泡
-
-                    // 允许ESC键关闭导航
-                    if (e.keyCode === 27) {
+                    e.stopPropagation();
+                    if (e.keyCode === 27) { // ESC
                         hideQuickNav();
                         e.preventDefault();
                     }
                 });
 
                 quickNavSearch.addEventListener('input', function (e) {
-                    currentSearchText = this.value; // 保存搜索文本
-                    filterQuickNavItems(this.value);
+                    currentSearchText = this.value;
+                    filterQuickNavItems(currentSearchText, currentExcludeText);
+                });
+            }
+
+            // 排除输入框功能
+            if (quickNavExclude) {
+                quickNavExclude.addEventListener('keydown', function (e) {
+                    e.stopPropagation();
+                    if (e.keyCode === 27) { // ESC
+                        hideQuickNav();
+                        e.preventDefault();
+                    }
+                });
+
+                quickNavExclude.addEventListener('input', function (e) {
+                    currentExcludeText = this.value;
+                    filterQuickNavItems(currentSearchText, currentExcludeText);
                 });
             }
 
@@ -5340,7 +5457,7 @@
                 }
             });
 
-            // 新增：设置悬停提示
+            // 设置悬停提示
             setupQuickNavTooltips();
         }
 
@@ -5364,15 +5481,22 @@
             quickNav.classList.add('visible');
             quickNavVisible = true;
 
-            // 恢复搜索文本
+            // 恢复搜索文本和排除文本
             const searchInput = document.getElementById('quickNavSearch');
+            const excludeInput = document.getElementById('quickNavExclude');
+
             if (searchInput) {
                 searchInput.value = currentSearchText;
                 searchInput.focus();
-                // 如果有搜索文本，重新应用筛选
-                if (currentSearchText) {
-                    filterQuickNavItems(currentSearchText);
-                }
+            }
+
+            if (excludeInput) {
+                excludeInput.value = currentExcludeText;
+            }
+
+            // 如果有搜索或排除文本，重新应用筛选
+            if (currentSearchText || currentExcludeText) {
+                filterQuickNavItems(currentSearchText, currentExcludeText);
             }
         }
 
@@ -5507,9 +5631,19 @@
         }
 
         // 筛选导航项 - 使用纯配置组名进行筛选
-        function filterQuickNavItems(searchText) {
+        function filterQuickNavItems(searchText, excludeText) {
             const navItems = document.querySelectorAll('.quick-nav-item');
-            const searchLower = searchText.toLowerCase();
+
+            // 处理包含关键词：分割并清理
+            const includeKeywords = searchText
+                ? searchText.split(',').map(keyword => keyword.trim().toLowerCase()).filter(keyword => keyword.length > 0)
+                : [];
+
+            // 处理排除关键词：分割并清理
+            const excludeKeywords = excludeText
+                ? excludeText.split(',').map(keyword => keyword.trim().toLowerCase()).filter(keyword => keyword.length > 0)
+                : [];
+
             let hasMatches = false;
 
             navItems.forEach(item => {
@@ -5521,7 +5655,21 @@
 
                 // 使用显示的纯配置组名进行筛选
                 const displayText = item.textContent.toLowerCase();
-                if (displayText.includes(searchLower)) {
+
+                // 包含条件：如果搜索关键词为空，或者配置组名包含任意一个搜索关键词
+                let matchesInclude = true;
+                if (includeKeywords.length > 0) {
+                    matchesInclude = includeKeywords.some(keyword => displayText.includes(keyword));
+                }
+
+                // 排除条件：如果排除关键词为空，或者配置组名不包含任何排除关键词
+                let matchesExclude = true;
+                if (excludeKeywords.length > 0) {
+                    matchesExclude = !excludeKeywords.some(keyword => displayText.includes(keyword));
+                }
+
+                // 同时满足包含和排除条件
+                if (matchesInclude && matchesExclude) {
                     item.style.display = 'block';
                     hasMatches = true;
                 } else {
@@ -5529,14 +5677,24 @@
                 }
             });
 
-            // 如果没有匹配项，显示提示
+            // 更新提示信息，显示当前的过滤条件
             const quickNavItems = document.getElementById('quickNavItems');
             let noResults = quickNavItems.querySelector('.no-results');
 
-            if (!hasMatches && searchText && !noResults) {
+            if (!hasMatches && !noResults) {
                 noResults = document.createElement('div');
                 noResults.className = 'quick-nav-item no-results';
-                noResults.textContent = '没有找到匹配的配置组';
+
+                let message = '没有找到匹配的配置组';
+                if (includeKeywords.length > 0 && excludeKeywords.length > 0) {
+                    message = `没有找到包含 [${includeKeywords.join(', ')}] 且排除 [${excludeKeywords.join(', ')}] 的配置组`;
+                } else if (includeKeywords.length > 0) {
+                    message = `没有找到包含 [${includeKeywords.join(', ')}] 的配置组`;
+                } else if (excludeKeywords.length > 0) {
+                    message = `没有找到排除 [${excludeKeywords.join(', ')}] 的配置组`;
+                }
+
+                noResults.textContent = message;
                 noResults.style.cursor = 'default';
                 noResults.style.color = '#999';
                 noResults.style.fontStyle = 'italic';
@@ -5545,14 +5703,13 @@
                 noResults.remove();
             }
         }
-
         // 刷新导航可见项 - 在筛选或隐藏操作后调用
         function refreshQuickNav() {
             if (quickNavVisible) {
                 updateQuickNavItems();
-                // 重新应用当前的搜索筛选
-                if (currentSearchText) {
-                    filterQuickNavItems(currentSearchText);
+                // 重新应用当前的搜索和排除筛选
+                if (currentSearchText || currentExcludeText) {
+                    filterQuickNavItems(currentSearchText, currentExcludeText);
                 }
             }
         }
