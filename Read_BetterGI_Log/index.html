@@ -3173,7 +3173,7 @@
             // 如果任务持续时间超过很短的时间（比如10秒），说明可能有实际执行
             if (task.startTime && task.endTime) {
                 const duration = (task.endTime.getTime() - task.startTime.getTime()) / 1000;
-                if (duration > 10) {
+                if (duration > 0) { 
                     return true;
                 }
             }
