@@ -1091,6 +1091,7 @@
                 <button class="control-btn" data-key="84">时间列</button>
                 <button class="control-btn" data-key="89">统计列</button>
                 <button class="control-btn" data-key="73">拾取物列</button>
+                <!-- <button class="control-btn" data-key="79">拾取效率</button> -->
                 <button class="control-btn" data-key="80">导出模式</button>
                 <button class="control-btn" data-key="74">异常任务</button>
                 <button class="control-btn" data-key="72">任務篩選</button>
@@ -1155,6 +1156,10 @@
         let lastAdjustmentTime = 0;
         const ADJUSTMENT_THROTTLE = 100; // 100ms节流
         let currentExcludeText = ''; // 保存当前的排除文本
+
+        // 在全局变量区域添加拾取效率相关变量
+        let currentPickEfficiencyItem = null; // 当前计算的拾取物
+        let isPickEfficiencyMode = false; // 是否处于拾取效率模式
 
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
@@ -1381,6 +1386,7 @@
                 84: timeColumnsVisible,  // 时间列
                 89: statsColumnsVisible, // 统计列
                 73: picksColumnsVisible, // 拾取物列
+                // 79: isPickEfficiencyMode, // 拾取效率模式（新增）
                 80: isStaticMode,        // 导出模式
                 74: hideZeroStatsTasks,  // 异常任务
                 72: isFilterMode         // 任務篩選
@@ -1422,6 +1428,9 @@
                 case 73: // 拾取物列
                     isActive = picksColumnsVisible;
                     break;
+                // case 79: // O 键 - 拾取效率
+                //     isActive = isPickEfficiencyMode;
+                //     break;
                 case 80: // 导出模式
                     isActive = isStaticMode;
                     break;
@@ -2358,6 +2367,15 @@
                 });
             });
 
+            // // 添加拾取效率按钮事件处理
+            // const efficiencyButtons = document.querySelectorAll('.pick-efficiency-btn');
+            // efficiencyButtons.forEach(btn => {
+            //     btn.addEventListener('click', function (e) {
+            //         e.stopPropagation();
+            //         togglePickEfficiencyMode();
+            //     });
+            // });
+
             // 窗口大小变化时使用防抖
             window.addEventListener('resize', debouncedAdjustTableHeader);
         }
@@ -3106,6 +3124,18 @@
                             }
                         }
 
+                        // 20. 队伍切换失败
+                        if (line.startsWith('队伍切换失败')) {
+                            const message = '队伍切换失败';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // 99. 此追踪脚本未正常走完！
                         if (line.includes('此追踪脚本未正常走完！')) {
                             const message = '脚本未正常走完';
@@ -3449,7 +3479,7 @@
                         </tr>`;
                 }
 
-                // 添加表頭行到thead
+                // 修改表头，在拾取物列添加效率按钮
                 html += `
                     <tr class="sticky-header">
                         <th data-sort-type="string">任务名称</th>
@@ -3462,7 +3492,10 @@
                         <th class="column-too-far-skip">过远跳过</th>
                         <th class="column-timeout">战斗超时</th>
                         <th class="column-teleport">传送失败</th>
-                        <th class="column-picks">拾取物</th>
+                        <th class="column-picks">
+                            拾取物 
+                            <!--<button class="pick-efficiency-btn" style="margin-left:5px;padding:2px 6px;font-size:12px;cursor:pointer;" title="计算拾取效率">⚡</button>-->
+                        </th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -4080,6 +4113,9 @@
             const currentFilterMode = isFilterMode;
             currentFilterKeywords = [...currentFilterKeywords];
 
+            const currentPickEfficiencyMode = isPickEfficiencyMode; // 保存拾取效率模式状态
+            currentPickEfficiencyItem = currentPickEfficiencyItem; // 保存当前计算的物品
+
             dropZone.innerHTML = generateHTML(result);
             setupCoordPopups();
 
@@ -4146,6 +4182,9 @@
             isFilterMode = currentFilterMode;
             currentFilterKeywords = currentFilterKeywords;
 
+            isPickEfficiencyMode = currentPickEfficiencyMode;
+            currentPickEfficiencyItem = currentPickEfficiencyItem;
+
             // 应用筛选状态
             if (isFilterMode) {
                 applyTaskFilter();
@@ -4163,6 +4202,23 @@
                     }
                     updateButtonState(74);
                     updateButtonState(72);
+                }, 150);
+            }
+
+            // 重新应用拾取效率模式
+            if (isPickEfficiencyMode && currentPickEfficiencyItem) {
+                setTimeout(() => {
+                    // 在拾取效率模式下隐藏拾取物汇总行
+                    const tables = document.querySelectorAll('table');
+                    tables.forEach(table => {
+                        const summaryRows = table.querySelectorAll('.summary-row');
+                        summaryRows.forEach(row => {
+                            row.style.display = 'none';
+                        });
+                    });
+
+                    applyPickEfficiency();
+                    // updateButtonState(79);
                 }, 150);
             }
 
@@ -4612,6 +4668,14 @@
 
 
                 e.preventDefault();
+            } else if (keyNum.keyCode == 79) { // O 键 - 拾取效率计算
+                if (!hasLogData) {
+                    e.preventDefault();
+                    return;
+                }
+
+                togglePickEfficiencyMode();
+                e.preventDefault();
             }
             // 在每个快捷键处理完后，更新对应的按钮状态
             if ([192, 84, 89, 73, 80, 74].includes(keyNum.keyCode)) {
@@ -4620,6 +4684,223 @@
                     updateButtonState(e.keyCode);
                 }, 50);
             }
+        }
+
+        // 切换拾取效率模式
+        function togglePickEfficiencyMode() {
+            if (isPickEfficiencyMode) {
+                // 退出拾取效率模式
+                exitPickEfficiencyMode();
+            } else {
+                // 进入拾取效率模式
+                enterPickEfficiencyMode();
+            }
+        }
+
+        // 进入拾取效率模式
+        function enterPickEfficiencyMode() {
+            const input = prompt("请输入要计算效率的拾取物名称（例如：甜甜花）");
+
+            if (input === null) {
+                // 用户取消输入
+                return;
+            }
+
+            const itemName = input.trim();
+
+            if (itemName.length === 0) {
+                alert("请输入有效的拾取物名称！");
+                return;
+            }
+
+            currentPickEfficiencyItem = itemName;
+            isPickEfficiencyMode = true;
+
+            // 应用拾取效率计算和排序
+            applyPickEfficiency();
+
+            // 更新按钮状态
+            // updateButtonState(79); // 假设使用 O 键（79）
+        }
+
+        // 修改退出拾取效率模式函数，确保正确恢复
+        function exitPickEfficiencyMode() {
+            isPickEfficiencyMode = false;
+            currentPickEfficiencyItem = null;
+
+            // 刷新页面恢复原始状态
+            refreshHTML();
+
+            // 隐藏状态提示
+            const indicator = document.getElementById('picksToggleIndicator');
+            indicator.classList.remove('visible');
+
+            // 更新按钮状态
+            // updateButtonState(79);
+        }
+
+        // 修改 applyPickEfficiency 函数，确保排除拾取物汇总行
+        function applyPickEfficiency() {
+            if (!currentPickEfficiencyItem) return;
+
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const container = table.closest('.group-container');
+
+                // 隐藏拾取物汇总行
+                const summaryRows = table.querySelectorAll('.summary-row');
+                summaryRows.forEach(row => {
+                    row.style.display = 'none';
+                });
+
+                // 选择所有任务行，排除表头、队伍角色行和汇总行
+                const rows = Array.from(table.querySelectorAll('tr:not(.sticky-header):not(.team-roles-row):not(.summary-row):not(.ignore-sort)'));
+
+                // 为每行计算拾取效率
+                const rowsWithEfficiency = rows.map(row => {
+                    const durationCell = row.querySelector('td:nth-child(4)'); // 耗时列
+                    const picksCell = row.querySelector('.column-picks'); // 拾取物列
+
+                    let efficiency = Infinity; // 默认效率为无穷大（没有该拾取物）
+                    let itemCount = 0;
+                    let originalDurationHtml = durationCell ? durationCell.innerHTML : '';
+
+                    if (durationCell && picksCell) {
+                        const durationText = durationCell.textContent;
+                        const picksText = picksCell.innerHTML;
+
+                        // 解析耗时（转换为秒）
+                        const durationInSeconds = parseDurationToSeconds(durationText);
+
+                        // 查找指定拾取物的数量（支持包含关键词）
+                        itemCount = findItemCount(picksText, currentPickEfficiencyItem);
+
+                        // 计算效率：秒/个
+                        if (itemCount > 0 && durationInSeconds > 0) {
+                            efficiency = durationInSeconds / itemCount;
+                        }
+                    }
+
+                    return {
+                        row: row,
+                        efficiency: efficiency,
+                        itemCount: itemCount,
+                        durationText: durationCell ? durationCell.textContent : '',
+                        originalDurationHtml: originalDurationHtml
+                    };
+                });
+
+                // 按效率排序（效率高的排在前面）
+                rowsWithEfficiency.sort((a, b) => {
+                    // 有拾取物的排在前面
+                    if (a.itemCount > 0 && b.itemCount === 0) return -1;
+                    if (a.itemCount === 0 && b.itemCount > 0) return 1;
+                    if (a.itemCount === 0 && b.itemCount === 0) return 0;
+
+                    // 都有的按效率排序（效率高的排前面）
+                    return a.efficiency - b.efficiency;
+                });
+
+                // 重新排列行
+                const tbody = table.querySelector('tbody');
+
+                // 先移除所有任务行（保留表头、队伍角色行和汇总行）
+                rows.forEach(row => {
+                    row.remove();
+                });
+
+                // 添加排序后的行
+                rowsWithEfficiency.forEach(item => {
+                    // 更新耗时显示
+                    const durationCell = item.row.querySelector('td:nth-child(4)');
+                    if (durationCell && item.itemCount > 0) {
+                        const efficiencyText = formatEfficiencyText(item.efficiency, item.itemCount);
+                        durationCell.innerHTML = `${item.durationText}<br><small style="color:#666;font-size:12px;">${efficiencyText}</small>`;
+                    } else if (durationCell) {
+                        // 恢复原始显示
+                        durationCell.innerHTML = item.originalDurationHtml;
+                    }
+
+                    tbody.appendChild(item.row);
+                });
+            });
+
+            // 显示状态提示
+            showPickEfficiencyIndicator();
+        }
+
+        // 解析耗时字符串为秒数
+        function parseDurationToSeconds(durationText) {
+            if (!durationText || durationText === '进行中') return 0;
+
+            let totalSeconds = 0;
+
+            // 匹配天、小时、分钟、秒
+            const dayMatch = durationText.match(/(\d+)天/);
+            const hourMatch = durationText.match(/(\d+)小时/);
+            const minuteMatch = durationText.match(/(\d+)分钟/);
+            const secondMatch = durationText.match(/(\d+(?:\.\d+)?)秒/);
+
+            if (dayMatch) totalSeconds += parseInt(dayMatch[1]) * 24 * 60 * 60;
+            if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 60 * 60;
+            if (minuteMatch) totalSeconds += parseInt(minuteMatch[1]) * 60;
+            if (secondMatch) totalSeconds += parseFloat(secondMatch[1]);
+
+            return totalSeconds;
+        }
+
+        // 修改 findItemCount 函数，支持包含关键字的匹配
+        function findItemCount(picksHtml, itemName) {
+            // 将HTML转换为文本进行搜索
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = picksHtml;
+            const picksText = tempDiv.textContent || tempDiv.innerText || '';
+
+            // 如果拾取物文本包含"无"，直接返回0
+            if (picksText.includes('无')) return 0;
+
+            // 分割拾取物（按逗号分割）
+            const pickItems = picksText.split(',');
+
+            let totalCount = 0;
+
+            pickItems.forEach(item => {
+                const trimmedItem = item.trim();
+
+                // 检查物品名称是否包含关键词
+                if (trimmedItem.toLowerCase().includes(itemName.toLowerCase())) {
+                    // 提取数量 - 匹配括号中的数字
+                    const countMatch = trimmedItem.match(/\((\d+)\)/);
+                    if (countMatch) {
+                        totalCount += parseInt(countMatch[1]);
+                    }
+                }
+            });
+
+            return totalCount;
+        }
+
+        // 转义正则表达式特殊字符
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // 格式化效率文本
+        function formatEfficiencyText(efficiency, itemCount) {
+            if (efficiency === Infinity) return '';
+
+            const secondsPerItem = Math.round(efficiency * 10) / 10; // 保留一位小数
+            return `${secondsPerItem}秒/1个`;
+        }
+
+        // 显示拾取效率状态提示
+        function showPickEfficiencyIndicator() {
+            const indicator = document.getElementById('picksToggleIndicator'); // 复用现有指示器
+            indicator.textContent = `拾取效率: ${currentPickEfficiencyItem} (按O退出)`;
+            indicator.classList.add('visible');
+
+            // 不自动隐藏，直到用户退出模式
         }
 
         // 添加显示状态提示函数
