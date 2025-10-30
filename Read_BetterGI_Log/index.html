@@ -3136,6 +3136,18 @@
                             }
                         }
 
+                        // 21.没有找到四叶印
+                        if (line.startsWith('没有找到四叶印')) {
+                            const message = '没有找到四叶印';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // 99. 此追踪脚本未正常走完！
                         if (line.includes('此追踪脚本未正常走完！')) {
                             const message = '脚本未正常走完';
