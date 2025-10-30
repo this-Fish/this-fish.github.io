@@ -1630,6 +1630,22 @@
                 toggleZeroStatsTasksNormal(); // 使用非筛选模式版本
             }
 
+            // 如果处于拾取效率模式，重新应用拾取效率计算
+            if (isPickEfficiencyMode) {
+                // 重新应用拾取效率模式，这会隐藏拾取物汇总行
+                applyPickEfficiency();
+            } else {
+                // 不在拾取效率模式下，确保拾取物汇总行正确显示
+                const tables = document.querySelectorAll('table');
+                tables.forEach(table => {
+                    const summaryRows = table.querySelectorAll('.summary-row');
+                    summaryRows.forEach(row => {
+                        // 只有在非拾取效率模式下才显示汇总行
+                        row.style.display = '';
+                    });
+                });
+            }
+
             // 隐藏筛选提示
             hideFilterIndicator();
 
@@ -1820,12 +1836,17 @@
                     teamRolesRow.style.display = '';
                 }
 
-                // 显示所有行，包括拾取物行
+                // 显示所有行，但根据拾取效率模式状态处理拾取物行
                 const rows = table.querySelectorAll('tr');
                 rows.forEach(row => {
                     if (!row.querySelector('th')) {
                         if (row.classList.contains('summary-row')) {
-                            row.style.display = hideZeroStatsTasks ? 'none' : '';
+                            // 在拾取效率模式下隐藏拾取物汇总行
+                            if (isPickEfficiencyMode) {
+                                row.style.display = 'none';
+                            } else {
+                                row.style.display = hideZeroStatsTasks ? 'none' : '';
+                            }
                         } else {
                             row.style.display = '';
                         }
@@ -4201,6 +4222,17 @@
             if (isFilterMode) {
                 applyTaskFilter();
                 showFilterIndicator();
+
+                // 如果在筛选模式下且不在拾取效率模式，确保拾取物行隐藏
+                if (!isPickEfficiencyMode) {
+                    const tables = document.querySelectorAll('table');
+                    tables.forEach(table => {
+                        const summaryRows = table.querySelectorAll('.summary-row');
+                        summaryRows.forEach(row => {
+                            row.style.display = 'none';
+                        });
+                    });
+                }
             }
 
             // 应用异常任务显示状态
@@ -4742,6 +4774,17 @@
 
             // 刷新页面恢复原始状态
             refreshHTML();
+
+            // 如果在筛选模式下，确保拾取物行保持隐藏
+            if (isFilterMode) {
+                const tables = document.querySelectorAll('table');
+                tables.forEach(table => {
+                    const summaryRows = table.querySelectorAll('.summary-row');
+                    summaryRows.forEach(row => {
+                        row.style.display = 'none';
+                    });
+                });
+            }
 
             // 隐藏状态提示
             const indicator = document.getElementById('picksToggleIndicator');
