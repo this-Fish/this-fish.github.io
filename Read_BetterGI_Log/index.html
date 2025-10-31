@@ -3169,7 +3169,67 @@
                             }
                         }
 
-                        // 99. 此追踪脚本未正常走完！
+                        // 22.未识别到具体路径，取上次点位
+                        if (line.startsWith('未识别到具体路径，取上次点位')) {
+                            const message = '地圖识别錯誤，取上次点位';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 23.未识别到具体路径，打开地图计算中心点
+                        if (line.startsWith('未识别到具体路径，打开地图计算中心点')) {
+                            const message = '地圖识别錯誤，打开地图计算中心点';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 24.鋤地一條龍1.10.0(强制黑芙)
+                        if (line.startsWith('上条路线识别到白芙，开始强制切换黑芙')) {
+                            const message = '强制切换黑芙';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 25.鋤地一條龍(检测到冻结，尝试挣脱)
+                        if (line.startsWith('检测到冻结，尝试挣脱')) {
+                            const message = '冻结挣脱';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 26.鋤地一條龍(检测到烹饪界面，尝试脱离)
+                        if (line.startsWith('检测到烹饪界面，尝试脱离')) {
+                            const message = '脱离烹饪界面';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 999. 此追踪脚本未正常走完！
                         if (line.includes('此追踪脚本未正常走完！')) {
                             const message = '脚本未正常走完';
                             const type = 'abnormal-alert';
