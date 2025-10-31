@@ -4803,21 +4803,23 @@
 
         // 进入拾取效率模式
         function enterPickEfficiencyMode() {
-            const input = prompt("请输入要计算效率的拾取物名称（例如：甜甜花）");
+            const input = prompt("请输入要计算效率的拾取物名称（多个关键字用逗号分隔，例如：甜甜花,薄荷）");
 
             if (input === null) {
                 // 用户取消输入
                 return;
             }
 
-            const itemName = input.trim();
+            const itemNames = input.split(',')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
 
-            if (itemName.length === 0) {
+            if (itemNames.length === 0) {
                 alert("请输入有效的拾取物名称！");
                 return;
             }
 
-            currentPickEfficiencyItem = itemName;
+            currentPickEfficiencyItem = itemNames;
             isPickEfficiencyMode = true;
 
             // 应用拾取效率计算和排序
@@ -4888,7 +4890,7 @@
                         // 解析耗时（转换为秒）
                         const durationInSeconds = parseDurationToSeconds(durationText);
 
-                        // 查找指定拾取物的数量（支持包含关键词）
+                        // 查找指定拾取物的数量（支持多个关键词）
                         itemCount = findItemCount(picksText, currentPickEfficiencyItem);
 
                         // 计算效率：秒/个
@@ -4966,7 +4968,7 @@
         }
 
         // 修改 findItemCount 函数，支持包含关键字的匹配
-        function findItemCount(picksHtml, itemName) {
+        function findItemCount(picksHtml, itemNames) {
             // 将HTML转换为文本进行搜索
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = picksHtml;
@@ -4983,8 +4985,12 @@
             pickItems.forEach(item => {
                 const trimmedItem = item.trim();
 
-                // 检查物品名称是否包含关键词
-                if (trimmedItem.toLowerCase().includes(itemName.toLowerCase())) {
+                // 检查物品名称是否包含任一关键字
+                const matchesAnyKeyword = itemNames.some(keyword =>
+                    trimmedItem.toLowerCase().includes(keyword.toLowerCase())
+                );
+
+                if (matchesAnyKeyword) {
                     // 提取数量 - 匹配括号中的数字
                     const countMatch = trimmedItem.match(/\((\d+)\)/);
                     if (countMatch) {
@@ -5011,8 +5017,12 @@
 
         // 显示拾取效率状态提示
         function showPickEfficiencyIndicator() {
-            const indicator = document.getElementById('picksToggleIndicator'); // 复用现有指示器
-            indicator.textContent = `拾取效率: ${currentPickEfficiencyItem} (按O退出)`;
+            const indicator = document.getElementById('picksToggleIndicator');
+            const keywordsText = Array.isArray(currentPickEfficiencyItem)
+                ? currentPickEfficiencyItem.join(', ')
+                : currentPickEfficiencyItem;
+
+            indicator.textContent = `拾取效率: ${keywordsText} (按O退出)`;
             indicator.classList.add('visible');
 
             // 不自动隐藏，直到用户退出模式
