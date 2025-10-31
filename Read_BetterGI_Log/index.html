@@ -3172,7 +3172,7 @@
                         // 22.未识别到具体路径，取上次点位
                         if (line.startsWith('未识别到具体路径，取上次点位')) {
                             const message = '地圖识别錯誤，取上次点位';
-                            const type = 'purple-alert';
+                            const type = 'pause-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
@@ -3184,7 +3184,7 @@
                         // 23.未识别到具体路径，打开地图计算中心点
                         if (line.startsWith('未识别到具体路径，打开地图计算中心点')) {
                             const message = '地圖识别錯誤，打开地图计算中心点';
-                            const type = 'purple-alert';
+                            const type = 'pause-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
