@@ -1161,6 +1161,8 @@
         let currentPickEfficiencyItem = null; // 当前计算的拾取物
         let isPickEfficiencyMode = false; // 是否处于拾取效率模式
 
+        let picksSortByCount = true; // true: 按数量排序, false: 按拾取顺序
+
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
             return new Promise((resolve) => {
@@ -3244,8 +3246,15 @@
                         const pickMatch = line.match(/交互或拾取："(.+?)"/);
 
                         if (pickMatch) {
-                            currentTask.picks.set(pickMatch[1], (currentTask.picks.get(pickMatch[1]) || 0) + 1);
-                            currentGroup.picks.set(pickMatch[1], (currentGroup.picks.get(pickMatch[1]) || 0) + 1);
+                            const itemName = pickMatch[1];
+                            currentTask.picks.set(itemName, (currentTask.picks.get(itemName) || 0) + 1);
+                            currentGroup.picks.set(itemName, (currentGroup.picks.get(itemName) || 0) + 1);
+
+                            // 新增：记录拾取顺序
+                            if (!currentTask.pickSequence) {
+                                currentTask.pickSequence = [];
+                            }
+                            currentTask.pickSequence.push(itemName);
                         }
                     }
                 }
@@ -3296,7 +3305,7 @@
             // 如果任务持续时间超过很短的时间（比如10秒），说明可能有实际执行
             if (task.startTime && task.endTime) {
                 const duration = (task.endTime.getTime() - task.startTime.getTime()) / 1000;
-                if (duration > -1) { 
+                if (duration > -1) {
                     return true;
                 }
             }
@@ -3713,7 +3722,7 @@
                     const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
 
                     // 生成拾取物显示文本
-                    let picksText = formatPicks(task.picks);
+                    let picksText = formatPicks(task.picks, task.pickSequence);
 
                     // 按顺序添加提示文本
                     const alerts = [];
@@ -3974,7 +3983,7 @@
                     const duration = calculateDuration(task.startTime, task.endTime);
 
                     // 生成拾取物显示文本
-                    let picksText = formatPicks(task.picks);
+                    let picksText = formatPicks(task.picks, task.pickSequence);
 
                     // 按顺序添加提示文本
                     const alerts = [];
@@ -4105,13 +4114,44 @@
             debouncedAdjustTableHeader();
         }
 
-        // 格式化拾取物
-        function formatPicks(picks) {
-            if (picks.size === 0) return '无';
-            return Array.from(picks.entries())
-                .sort((a, b) => b[1] - a[1]) // 按数量从多到少排序
-                .map(([item, count]) => `${item} (${count})`)
-                .join(', ');
+        // 修改格式化拾取物的函数，支持两种显示方式
+        function formatPicks(picks, pickSequence) {
+            if (!picks || picks.size === 0) return '无';
+
+            if (picksSortByCount) {
+                // 按数量从多到少排序（合并统计）
+                return Array.from(picks.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([item, count]) => `${item} (${count})`)
+                    .join(', ');
+            } else {
+                // 按拾取顺序显示（不合并，重复的单独显示）
+                if (!pickSequence || pickSequence.length === 0) return '无';
+                return pickSequence.join(', ');
+            }
+        }
+
+        // 添加切换拾取物显示顺序的函数
+        function togglePicksSortOrder() {
+            picksSortByCount = !picksSortByCount;
+
+            // 刷新HTML以应用新的排序方式
+            refreshHTML();
+
+            // 显示状态提示
+            showPicksSortOrderIndicator();
+        }
+
+        // 添加显示拾取物排序状态提示的函数
+        function showPicksSortOrderIndicator() {
+            const indicator = document.getElementById('picksToggleIndicator');
+            indicator.textContent = `拾取物显示: ${picksSortByCount ? '按数量合并' : '按拾取顺序'}`;
+            indicator.classList.add('visible');
+
+            // 2秒后隐藏提示
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
         }
 
         // 新增：更新时间列的显示状态
@@ -4208,6 +4248,7 @@
 
             const currentPickEfficiencyMode = isPickEfficiencyMode; // 保存拾取效率模式状态
             currentPickEfficiencyItem = currentPickEfficiencyItem; // 保存当前计算的物品
+            const currentPicksSortByCount = picksSortByCount; // 新增：保存拾取物排序状态
 
             dropZone.innerHTML = generateHTML(result);
             setupCoordPopups();
@@ -4277,6 +4318,7 @@
 
             isPickEfficiencyMode = currentPickEfficiencyMode;
             currentPickEfficiencyItem = currentPickEfficiencyItem;
+            picksSortByCount = currentPicksSortByCount; // 新增：恢复拾取物排序状态
 
             // 应用筛选状态
             if (isFilterMode) {
@@ -4606,6 +4648,7 @@
                 help_text += "Y   切换统计列显示/隐藏\n";
                 help_text += "U   切换表格格式(新旧版)\n";
                 help_text += "I   切换拾取物列显示/隐藏\n";
+                help_text += "Alt+I 切换拾取物显示顺序(数量/拾取顺序)\n";
                 help_text += "J   隐藏/显示所有统计为0的任务\n";
                 help_text += "P   进入/退出导出模式\n";
                 help_text += "~   切换亮色/暗色主题\n";
@@ -4736,6 +4779,14 @@
                 }
 
                 toggleTaskFilter();
+                e.preventDefault();
+            } else if (keyNum.keyCode == 73 && keyNum.altKey) { // Alt + I - 切换拾取物显示顺序
+                if (!hasLogData) {
+                    e.preventDefault();
+                    return;
+                }
+
+                togglePicksSortOrder();
                 e.preventDefault();
             } else if (keyNum.keyCode == 73) { // I键 - 切换拾取物列显示（仅旧版格式）
                 // if (!useLegacyFormat) {
@@ -4977,27 +5028,50 @@
             // 如果拾取物文本包含"无"，直接返回0
             if (picksText.includes('无')) return 0;
 
-            // 分割拾取物（按逗号分割）
-            const pickItems = picksText.split(',');
-
             let totalCount = 0;
 
-            pickItems.forEach(item => {
-                const trimmedItem = item.trim();
+            // 檢查是否為按拾取顺序模式（文本中沒有括號和數字）
+            const isSequenceMode = !picksHtml.includes('(') && picksText.includes(',');
 
-                // 检查物品名称是否包含任一关键字
-                const matchesAnyKeyword = itemNames.some(keyword =>
-                    trimmedItem.toLowerCase().includes(keyword.toLowerCase())
-                );
-
-                if (matchesAnyKeyword) {
-                    // 提取数量 - 匹配括号中的数字
-                    const countMatch = trimmedItem.match(/\((\d+)\)/);
-                    if (countMatch) {
-                        totalCount += parseInt(countMatch[1]);
+            if (isSequenceMode) {
+                // 按拾取顺序模式：直接統計關鍵字出現次數
+                const items = picksText.split(',').map(item => item.trim());
+                
+                items.forEach(item => {
+                    // 檢查物品名稱是否包含任一關鍵字
+                    const matchesAnyKeyword = itemNames.some(keyword => 
+                        item.toLowerCase().includes(keyword.toLowerCase())
+                    );
+                    
+                    if (matchesAnyKeyword) {
+                        totalCount += 1; // 每個匹配的物品計為1
                     }
-                }
-            });
+                });
+            } else {
+                // 按數量合併模式：使用原有的邏輯
+                // 分割拾取物（按逗号分割）
+                const pickItems = picksText.split(',');
+
+                pickItems.forEach(item => {
+                    const trimmedItem = item.trim();
+
+                    // 检查物品名称是否包含任一关键字
+                    const matchesAnyKeyword = itemNames.some(keyword => 
+                        trimmedItem.toLowerCase().includes(keyword.toLowerCase())
+                    );
+
+                    if (matchesAnyKeyword) {
+                        // 提取数量 - 匹配括号中的数字
+                        const countMatch = trimmedItem.match(/\((\d+)\)/);
+                        if (countMatch) {
+                            totalCount += parseInt(countMatch[1]);
+                        } else {
+                            // 如果沒有括號，默認計為1
+                            totalCount += 1;
+                        }
+                    }
+                });
+            }
 
             return totalCount;
         }
