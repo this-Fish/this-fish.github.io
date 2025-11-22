@@ -3234,7 +3234,7 @@
                         // 997. 检测到空月祝福界面，自动点击
                         if (line.includes('检测到空月祝福界面，自动点击')) {
                             const message = '领取空月祝福';
-                            const type = 'abnormal-alert';
+                            const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
