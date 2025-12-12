@@ -3243,6 +3243,35 @@
                             }
                         }
                         
+                        // 27.調時(设置时间到 HH 点 MM 分)
+                        // if (line.includes("设置时间到") && line.includes("点") && line.includes("分")) {
+                        //     const match = line.match(/设置时间到 (\d+) 点 (\d+) 分/);
+                        //     if (match) {
+                        //         const hour = match[1];
+                        //         const minute = match[2];
+                        //         const message = `调时至${hour}时${minute}分`;
+                        //         const type = 'purple-alert';
+                        //         if (currentTask.specialAlerts.has(message)) {
+                        //             const existing = currentTask.specialAlerts.get(message);
+                        //             existing.count++;
+                        //         } else {
+                        //             currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                        //         }
+                        //     }
+                        // }
+
+                        // 28. 采集cd管理(进行食材加工)
+                        if (line.match(/正在前往.*进行食材加工/)) {
+                            const message = '进行食材加工';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // 997. 检测到空月祝福界面，自动点击
                         if (line.includes('检测到空月祝福界面，自动点击')) {
                             const message = '领取空月祝福';
@@ -3279,18 +3308,55 @@
                             }
                         }
 
-                        const pickMatch = line.match(/交互或拾取："(.+?)"/);
+                        // const pickMatch = line.match(/交互或拾取："(.+?)"/);
 
-                        if (pickMatch) {
-                            const itemName = pickMatch[1];
-                            currentTask.picks.set(itemName, (currentTask.picks.get(itemName) || 0) + 1);
-                            currentGroup.picks.set(itemName, (currentGroup.picks.get(itemName) || 0) + 1);
+                        // if (pickMatch) {
+                        //     const itemName = pickMatch[1];
+                        //     currentTask.picks.set(itemName, (currentTask.picks.get(itemName) || 0) + 1);
+                        //     currentGroup.picks.set(itemName, (currentGroup.picks.get(itemName) || 0) + 1);
 
-                            // 新增：记录拾取顺序
+                        //     // 新增：记录拾取顺序
+                        //     if (!currentTask.pickSequence) {
+                        //         currentTask.pickSequence = [];
+                        //     }
+                        //     currentTask.pickSequence.push(itemName);
+                        // }
+                        const pickPatterns = [
+                            /交互或拾取："(.+?)"/,          // 原有模式
+                            /尝试钓取 "(.+?)"/,             // 釣魚模式
+                            /拉扯结束/                       // 釣魚結束標記
+                        ];
+                        
+                        let pickMatchResult = null;
+                        let pickItemName = null;
+
+                        // 使用配置的模式進行匹配
+                        for (const pattern of pickPatterns) {
+                            const match = line.match(pattern);
+                            if (match) {
+                                pickMatchResult = match;
+
+                                // 提取拾取物名稱
+                                // 如果有捕獲組（.*），使用捕獲組內容作為拾取物
+                                // 如果沒有捕獲組，使用整個匹配字符串作為拾取物
+                                if (match.length > 1 && match[1]) {
+                                    pickItemName = match[1];
+                                } else {
+                                    pickItemName = match[0];
+                                }
+
+                                break; // 匹配到一個模式就停止
+                            }
+                        }
+                        if (pickItemName) {
+                            currentTask.picks.set(pickItemName, (currentTask.picks.get(pickItemName) || 0) + 1);
+                            currentGroup.picks.set(pickItemName, (currentGroup.picks.get(pickItemName) || 0) + 1);
+
+                            // 新增：記錄拾取順序
                             if (!currentTask.pickSequence) {
                                 currentTask.pickSequence = [];
                             }
-                            currentTask.pickSequence.push(itemName);
+                            currentTask.pickSequence.push(pickItemName);
                         }
                     }
                 }
