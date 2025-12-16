@@ -2677,10 +2677,11 @@
                     // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)/);
                     // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
                     // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|开始购买NPC: "(.+?)"|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
-                    match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|开始购买NPC: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
+                    // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|开始购买NPC: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"|→ 开始执行键鼠脚本: "(.+?)"/);
+                    match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|→ 开始执行JS脚本: "(.+?)"|→ 开始执行键鼠脚本: "(.+?)"/);
                     if (match) {
                         // const taskName = match[1] || match[2] || match[3] || match[4];
-                        const taskName = match[1] || match[2] || match[3] || match[4] || match[5];
+                        const taskName = match[1] || match[2] || match[3] || match[4] ;
                         const task = {
                             name: taskName,
                             startTime: parseTime(prevLine, fileDate),
