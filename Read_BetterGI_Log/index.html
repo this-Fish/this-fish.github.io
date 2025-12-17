@@ -1113,7 +1113,7 @@
             border: 1px solid rgba(0, 0, 0, 0);
             font-family: inherit;
         }
-        
+
         /* 暗色主題下的排序按鈕樣式 */
         body.dark-theme .sort-btn {
             color: #fff;
@@ -1225,6 +1225,8 @@
         let isPickEfficiencyMode = false; // 是否处于拾取效率模式
 
         let picksSortByCount = true; // true: 按数量排序, false: 按拾取顺序
+        let currentSortState = 0; // 0:读取顺序, 1:时间排序, 2:耗时升序, 3:耗时降序
+
 
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
@@ -1741,9 +1743,6 @@
                     row.style.display = 'none';
                 });
 
-
-
-
                 // 第一步：检查配置组名是否匹配关键字
                 const groupMatchesKeyword = currentFilterKeywords.some(keyword =>
                     groupName.toLowerCase().includes(keyword.toLowerCase())
@@ -2055,8 +2054,8 @@
             }
         });
 
-// 簡化版本，處理兩種格式
         function setupSortButtons() {
+            // 时间排序按钮
             document.querySelectorAll('.sort-btn').forEach(btn => {
                 // 移除旧的事件监听器
                 const newBtn = btn.cloneNode(true);
@@ -2071,175 +2070,226 @@
 
                     if (!tbody) return;
 
-                    // 切換排序狀態
-                    const toTimeSort = !this.classList.contains('sorted-by-time');
-
-                    if (isLegacy) {
-                        console.log('排序旧版表格');
-                        sortLegacyTable(tbody, toTimeSort);
+                    // 切换排序状态
+                    // 如果当前是耗时排序，切换到时间排序
+                    // 否则在读取顺序和时间排序之间切换
+                    if (currentSortState === 2 || currentSortState === 3) {
+                        currentSortState = 1; // 切换到时间排序
                     } else {
-                        console.log('排序新版表格');
-                        sortNormalTable(tbody, toTimeSort);
+                        currentSortState = currentSortState === 0 ? 1 : 0; // 在0和1之间切换
                     }
 
-                    // 更新按鈕狀態
-                    if (toTimeSort) {
-                        this.classList.add('sorted-by-time');
-                        this.textContent = '↑';
-                        this.title = '時間排序（最近的在前）';
+                    // 应用排序
+                    applySorting(tbody, isLegacy);
+
+                    // 更新按钮状态
+                    updateSortButtons();
+                });
+            });
+            
+            function applySorting(tbody, isLegacy) {
+                if (isLegacy) {
+                    sortLegacyTableByAll(tbody);
+                } else {
+                    sortNormalTableByAll(tbody);
+                }
+            }
+
+            function sortNormalTableByAll(tbody) {
+                const rows = Array.from(tbody.querySelectorAll('tr[data-original-index]'));
+                if (rows.length <= 1) return;
+
+                rows.sort((a, b) => {
+                    if (currentSortState === 0) {
+                        // 读取顺序
+                        const indexA = parseInt(a.getAttribute('data-original-index') || 0);
+                        const indexB = parseInt(b.getAttribute('data-original-index') || 0);
+                        return indexA - indexB;
+                    } else if (currentSortState === 1) {
+                        // 时间排序：最近的在前
+                        const timeA = parseInt(a.getAttribute('data-start-timestamp') || 0);
+                        const timeB = parseInt(b.getAttribute('data-start-timestamp') || 0);
+                        return timeB - timeA;
                     } else {
-                        this.classList.remove('sorted-by-time');
-                        this.textContent = '↓';
-                        this.title = '讀取順序';
+                        // 获取耗时秒数
+                        const durationA = parseDurationToSeconds(a.querySelector('td:nth-child(4)').textContent);
+                        const durationB = parseDurationToSeconds(b.querySelector('td:nth-child(4)').textContent);
+
+                        if (currentSortState === 2) {
+                            // 耗时升序（小到大）
+                            return durationA - durationB;
+                        } else {
+                            // 耗时降序（大到小）
+                            return durationB - durationA;
+                        }
                     }
+                });
+
+                // 重新插入
+                const fragment = document.createDocumentFragment();
+                rows.forEach(row => fragment.appendChild(row));
+
+                // 保存並重新組裝
+                const headerRow = tbody.querySelector('.team-roles-row');
+                const summaryRow = tbody.querySelector('.summary-row');
+
+                while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+                if (headerRow) tbody.appendChild(headerRow);
+                tbody.appendChild(fragment);
+                if (summaryRow) tbody.appendChild(summaryRow);
+            }
+
+            function sortLegacyTableByAll(tbody) {
+                console.log('sortLegacyTableByAll called');
+
+                if (!tbody) return;
+
+                // 获取所有任务ID
+                const taskMap = new Map();
+                const taskRows = tbody.querySelectorAll('tr[data-task-id]');
+
+                // 收集每个任务的所有行
+                taskRows.forEach(row => {
+                    const taskId = row.getAttribute('data-task-id');
+                    if (taskId) {
+                        if (!taskMap.has(taskId)) {
+                            taskMap.set(taskId, []);
+                        }
+                        taskMap.get(taskId).push(row);
+                    }
+                });
+
+                // 获取主行用于排序
+                const mainRows = Array.from(tbody.querySelectorAll('.main-row-name'))
+                    .map(cell => {
+                        const tr = cell.closest('tr');
+                        return tr && tr.hasAttribute('data-task-id') ? tr : null;
+                    })
+                    .filter(tr => tr !== null);
+
+                if (mainRows.length <= 1) return;
+
+                // 排序主行
+                mainRows.sort((a, b) => {
+                    if (currentSortState === 0) {
+                        const indexA = parseInt(a.getAttribute('data-original-index') || 0);
+                        const indexB = parseInt(b.getAttribute('data-original-index') || 0);
+                        return indexA - indexB;
+                    } else if (currentSortState === 1) {
+                        const timeA = parseInt(a.getAttribute('data-start-timestamp') || 0);
+                        const timeB = parseInt(b.getAttribute('data-start-timestamp') || 0);
+                        return timeB - timeA;
+                    } else {
+                        // 获取耗时秒数
+                        const durationA = parseDurationToSeconds(a.querySelector('td:nth-child(4)').textContent);
+                        const durationB = parseDurationToSeconds(b.querySelector('td:nth-child(4)').textContent);
+
+                        if (currentSortState === 2) {
+                            return durationA - durationB;
+                        } else {
+                            return durationB - durationA;
+                        }
+                    }
+                });
+
+                // 创建文档片段
+                const fragment = document.createDocumentFragment();
+
+                // 获取并保存非任务行
+                const headerRow = tbody.querySelector('.team-roles-row');
+                const summaryRow = tbody.querySelector('.summary-row');
+
+                // 清空tbody
+                while (tbody.firstChild) {
+                    tbody.removeChild(tbody.firstChild);
+                }
+
+                // 添加表头行
+                if (headerRow) {
+                    tbody.appendChild(headerRow);
+                }
+
+                // 按排序后的顺序添加任务行
+                mainRows.forEach(mainRow => {
+                    const taskId = mainRow.getAttribute('data-task-id');
+                    if (taskId && taskMap.has(taskId)) {
+                        const rows = taskMap.get(taskId);
+                        rows.forEach(row => {
+                            fragment.appendChild(row);
+                        });
+                    }
+                });
+
+                // 添加排序后的任务行
+                tbody.appendChild(fragment);
+
+                // 添加汇总行
+                if (summaryRow) {
+                    tbody.appendChild(summaryRow);
+                }
+            }
+
+            // 耗时排序按钮
+            document.querySelectorAll('.duration-sort-btn').forEach(btn => {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+
+                newBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+
+                    const table = this.closest('table');
+                    const isLegacy = table.closest('.legacy-format') !== null;
+                    const tbody = table.querySelector('tbody');
+
+                    if (!tbody) return;
+
+                    // 切换排序状态
+                    // 如果当前是时间排序或读取顺序，切换到耗时升序
+                    // 否则在耗时升序和耗时降序之间切换
+                    if (currentSortState === 0 || currentSortState === 1) {
+                        currentSortState = 2; // 切换到耗时升序
+                    } else if (currentSortState === 2) {
+                        currentSortState = 3; // 切换到耗时降序
+                    } else {
+                        currentSortState = 2; // 从耗时降序回到耗时升序
+                    }
+
+                    // 应用排序
+                    applySorting(tbody, isLegacy);
+
+                    // 更新按钮状态
+                    updateSortButtons();
                 });
             });
         }
 
-        function sortNormalTable(tbody, byTime) {
-            const rows = Array.from(tbody.querySelectorAll('tr[data-original-index]'));
-            if (rows.length <= 1) return;
-
-            rows.sort((a, b) => {
-                if (byTime) {
-                    // 時間排序：最近的在前
-                    const timeA = parseInt(a.getAttribute('data-start-timestamp') || 0);
-                    const timeB = parseInt(b.getAttribute('data-start-timestamp') || 0);
-                    return timeB - timeA; // 降序
+        function updateSortButtons() {
+            // 更新时间排序按钮
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                if (currentSortState === 0) {
+                    btn.textContent = '↓';
+                    btn.title = '读取顺序';
+                } else if (currentSortState === 1) {
+                    btn.textContent = '↑';
+                    btn.title = '时间排序（最近的在前）';
                 } else {
-                    // 讀取順序
-                    const indexA = parseInt(a.getAttribute('data-original-index') || 0);
-                    const indexB = parseInt(b.getAttribute('data-original-index') || 0);
-                    return indexA - indexB; // 升序
+                    btn.textContent = '↕';
+                    btn.title = '点击切换排序';
                 }
             });
 
-            // 重新插入
-            const fragment = document.createDocumentFragment();
-            rows.forEach(row => fragment.appendChild(row));
-
-            // 保存並重新組裝
-            const headerRow = tbody.querySelector('.team-roles-row');
-            const summaryRow = tbody.querySelector('.summary-row');
-
-            while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
-            if (headerRow) tbody.appendChild(headerRow);
-            tbody.appendChild(fragment);
-            if (summaryRow) tbody.appendChild(summaryRow);
-        }
-
-        function sortLegacyTable(tbody, byTime) {
-            console.log('sortLegacyTable called');
-
-            if (!tbody) {
-                console.error('tbody is null');
-                return;
-            }
-
-            // 获取所有任务ID
-            const taskMap = new Map();
-            const taskRows = tbody.querySelectorAll('tr[data-task-id]');
-
-            console.log('Task rows found:', taskRows.length);
-
-            // 收集每个任务的所有行
-            taskRows.forEach(row => {
-                const taskId = row.getAttribute('data-task-id');
-                if (taskId) {
-                    if (!taskMap.has(taskId)) {
-                        taskMap.set(taskId, []);
-                    }
-                    taskMap.get(taskId).push(row);
-                }
-            });
-
-            console.log('Task groups found:', taskMap.size);
-
-            // 获取主行用于排序
-            const mainRows = Array.from(tbody.querySelectorAll('.main-row-name'))
-                .map(cell => {
-                    const tr = cell.closest('tr');
-                    return tr && tr.hasAttribute('data-task-id') ? tr : null;
-                })
-                .filter(tr => tr !== null);
-
-            console.log('Main rows for sorting:', mainRows.length);
-
-            if (mainRows.length <= 1) {
-                console.log('Not enough rows to sort');
-                return;
-            }
-
-            // 排序主行
-            mainRows.sort((a, b) => {
-                if (byTime) {
-                    const timeA = parseInt(a.getAttribute('data-start-timestamp') || 0);
-                    const timeB = parseInt(b.getAttribute('data-start-timestamp') || 0);
-                    console.log(`Sorting by time: ${timeB} - ${timeA} = ${timeB - timeA}`);
-                    return timeB - timeA; // 降序：最近的在前
+            // 更新耗时排序按钮
+            document.querySelectorAll('.duration-sort-btn').forEach(btn => {
+                if (currentSortState === 2) {
+                    btn.textContent = '↑';
+                    btn.title = '耗时升序（小到大）';
+                } else if (currentSortState === 3) {
+                    btn.textContent = '↓';
+                    btn.title = '耗时降序（大到小）';
                 } else {
-                    const indexA = parseInt(a.getAttribute('data-original-index') || 0);
-                    const indexB = parseInt(b.getAttribute('data-original-index') || 0);
-                    console.log(`Sorting by original order: ${indexA} - ${indexB} = ${indexA - indexB}`);
-                    return indexA - indexB; // 升序：原始顺序
+                    btn.textContent = '↕';
+                    btn.title = '点击切换排序';
                 }
-            });
-
-            // 创建文档片段
-            const fragment = document.createDocumentFragment();
-
-            // 获取并保存非任务行
-            const headerRow = tbody.querySelector('.team-roles-row');
-            const summaryRow = tbody.querySelector('.summary-row');
-
-            // 清空tbody
-            while (tbody.firstChild) {
-                tbody.removeChild(tbody.firstChild);
-            }
-
-            // 添加表头行
-            if (headerRow) {
-                tbody.appendChild(headerRow);
-            }
-
-            // 按排序后的顺序添加任务行
-            mainRows.forEach((mainRow, index) => {
-                console.log(`Adding task group ${index + 1}`);
-                const taskId = mainRow.getAttribute('data-task-id');
-                if (taskId && taskMap.has(taskId)) {
-                    const rows = taskMap.get(taskId);
-                    rows.forEach(row => {
-                        console.log(`Adding row for task ${taskId}`);
-                        fragment.appendChild(row);
-                    });
-                }
-            });
-
-            // 添加排序后的任务行
-            tbody.appendChild(fragment);
-
-            // 添加汇总行
-            if (summaryRow) {
-                tbody.appendChild(summaryRow);
-            }
-
-            console.log('sortLegacyTable completed');
-        }
-        // 輔助函數：按原始順序排序
-        function sortByOriginalOrder(rows) {
-            rows.sort((a, b) => {
-                const indexA = parseInt(a.getAttribute('data-original-index') || 0);
-                const indexB = parseInt(b.getAttribute('data-original-index') || 0);
-                return indexA - indexB;
-            });
-        }
-
-        // 輔助函數：按時間排序（最近的在前）
-        function sortByTime(rows) {
-            rows.sort((a, b) => {
-                const timeA = parseInt(a.getAttribute('data-start-timestamp') || 0);
-                const timeB = parseInt(b.getAttribute('data-start-timestamp') || 0);
-                return timeB - timeA; // 降序：最近的在前
             });
         }
 
@@ -2257,7 +2307,7 @@
             // 添加双击重置功能
             let lastClickTime = 0;
             let clickTimeout = null;
-            
+
             setupSortButtons();
 
             // 定位弹窗函数
@@ -2654,20 +2704,6 @@
 
             // 窗口大小变化时使用防抖
             window.addEventListener('resize', debouncedAdjustTableHeader);
-        }
-
-        // 文件处理流程
-        async function processFiles(files) {
-            return files
-                .map(file => ({
-                    file, // 保留原始File对象
-                    date: parseDateFromFileName(file.name)
-                }))
-                .sort((a, b) => a.date - b.date) // 按日期从新到新排序
-                .map(entry => ({
-                    file: entry.file, // 直接传递File对象
-                    date: entry.date
-                }));
         }
 
         // 从文件名解析日期
@@ -3286,7 +3322,7 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-                        
+
                         //10.2
                         if (line.includes("多次尝试未恢复，尝试最小化后激活窗口！")) {
                             const message = '窗口焦点异常，最小化重试';
@@ -3496,7 +3532,7 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-                        
+
                         // 27.調時(设置时间到 HH 点 MM 分)
                         // if (line.includes("设置时间到") && line.includes("点") && line.includes("分")) {
                         //     const match = line.match(/设置时间到 (\d+) 点 (\d+) 分/);
@@ -3580,7 +3616,7 @@
                             /尝试钓取 "(.+?)"/,             // 釣魚模式
                             /拉扯结束/                       // 釣魚結束標記
                         ];
-                        
+
                         let pickMatchResult = null;
                         let pickItemName = null;
 
@@ -3834,37 +3870,6 @@
             }
         }
 
-        // 切換全屏模式
-        function changeFullScreen() {
-            // 判断当前是否全屏
-            if (!document.fullscreenElement) {
-                // 进入全屏（兼容不同浏览器）
-                const element = document.documentElement;
-                if (element.requestFullscreen) {
-                    element.requestFullscreen().catch(err => {
-                        console.error(`全屏请求错误: ${err.message}`);
-                    });
-                } else if (element.mozRequestFullScreen) { // Firefox
-                    element.mozRequestFullScreen();
-                } else if (element.webkitRequestFullscreen) { // Chrome/Safari
-                    element.webkitRequestFullscreen();
-                } else if (element.msRequestFullscreen) { // IE/Edge
-                    element.msRequestFullscreen();
-                }
-            } else {
-                // 退出全屏（兼容不同浏览器）
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.mozCancelFullScreen) { // Firefox
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) { // Chrome/Safari
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) { // IE/Edge
-                    document.msExitFullscreen();
-                }
-            }
-        }
-
         // HTML生成逻辑
         function generateHTML(groups) {
             if (useLegacyFormat) {
@@ -3947,7 +3952,11 @@
                                     title="点击切换排序（默认：读取顺序）">↓</btn>
                         </th>
                         <th class="column-end-time">结束时间</th>
-                        <th data-sort-type="number">耗时</th>
+                        <th data-sort-type="number">
+                            耗时 
+                            <btn class="duration-sort-btn" style="font-size:15px;padding:1px 4px;margin-left:3px;cursor:pointer;" 
+                                title="点击切换排序">↕</btn>
+                        </th>
                         <th class="column-revive">复活次数</th>
                         <th class="column-retry">重试次数</th>
                         <th class="column-retry-detail">疑似卡死</th>
@@ -4215,12 +4224,15 @@
                         <th data-sort-type="string">任务名称</th>
                         <th class="column-start-time">
                             开始时间 
-                            <button class="sort-btn" style="font-size:15px;padding:1px 4px;margin-left:3px;cursor:pointer;border:" 
-                                        title="点击切换排序（默认：读取顺序）">↓</button>
-                            </th>
+                            <btn class="sort-btn" style="font-size:15px;padding:1px 4px;margin-left:3px;cursor:pointer;" 
+                                title="点击切换排序（默认：读取顺序）">↓</btn>
                         </th>
                         <th class="column-end-time" data-sort-type="date">结束时间</th>
-                        <th data-sort-type="number">耗时</th>
+                        <th data-sort-type="number">
+                            耗时 
+                            <btn class="duration-sort-btn" style="font-size:15px;padding:1px 4px;margin-left:3px;cursor:pointer;" 
+                                title="点击切换排序">↕</btn>
+                        </th>
                         <th class="column-revive" data-sort-type="number">复活次数</th>
                         <th class="column-retry" data-sort-type="number">重试次数</th>
                         <th class="column-retry-detail" data-sort-type="number">疑似卡死</th>
@@ -4668,6 +4680,9 @@
 
             // 设置行高亮效果
             setupRowHighlight();
+
+            // 重置排序状态为读取顺序
+            currentSortState = 0;
 
             // 动态调整表头位置 - 添加这行
             setTimeout(() => {
