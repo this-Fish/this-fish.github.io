@@ -3158,6 +3158,17 @@
                         if (line.includes("距离过远") && /\(\d+\.?\d*,\d+\.?\d*\)->\(\d+\.?\d*,\d+\.?\d*\)=\d+\.?\d*，跳过路径点/)
                             currentTask.faults.too_far_skip++;
 
+                        if (line.includes("，重试多次后仍然失败，放弃此路径点！")) {
+                            const message = '路径识别失败，放弃路径';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // 战斗超时事件
                         // if (line.includes("战斗超时")) {
                         if (line.includes("战斗超时结束") || line.includes("旋转次数达到上限，战斗结束")) {
@@ -3270,7 +3281,7 @@
                         }
 
                         // 6. 战斗脚本设置错误
-                        if (line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')) {
+                        if (line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')||line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"')) {
                             const message = '未匹配到任何战斗脚本';
                             const type = 'combat-script-error';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3381,7 +3392,7 @@
                         }
 
                         // 13. 选项列表不存在传送点  重试
-                        if (line.includes("选项列表不存在传送点  重试")) {
+                        if (line.includes("选项列表不存在传送点  重试")||line.includes("传送点未激活或不存在  重试")) {
                             const message = '传送点不存在';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3582,7 +3593,7 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-
+                        
                         // 997. 检测到空月祝福界面，自动点击
                         if (line.includes('检测到空月祝福界面，自动点击')) {
                             const message = '领取空月祝福';
