@@ -3564,8 +3564,20 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
+                        
+                        // 27.鋤地一條龍(坐标获取异常，不记录运行数据)
+                        if (line.includes('坐标获取异常，不记录运行数据')) {
+                            const message = '终点坐标异常，不记录';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
 
-                        // 27.調時(设置时间到 HH 点 MM 分)
+                        // 28.調時(设置时间到 HH 点 MM 分)
                         // if (line.includes("设置时间到") && line.includes("点") && line.includes("分")) {
                         //     const match = line.match(/设置时间到 (\d+) 点 (\d+) 分/);
                         //     if (match) {
@@ -3582,7 +3594,7 @@
                         //     }
                         // }
 
-                        // 28. 采集cd管理(进行食材加工)
+                        // 29. 采集cd管理(进行食材加工)
                         if (line.match(/正在前往.*进行食材加工/)) {
                             const message = '进行食材加工';
                             const type = 'purple-alert';
