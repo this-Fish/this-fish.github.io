@@ -556,6 +556,33 @@
             background: rgba(255, 255, 255, 1);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
+        
+        #quickNavTotalTime {
+            font-size: 12px;
+            color: #333;
+            padding: 6px 8px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            background-color: #f5f5f5;
+            flex-shrink: 0;
+            /* 防止被壓縮 */
+        }
+
+        #quickNavTotalTimeValue {
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 暗色主題下的樣式 */
+        body.dark-theme #quickNavTotalTime {
+            background-color: #333;
+            color: #ffffff;
+            border-bottom-color: #555;
+        }
+
+        body.dark-theme #quickNavTotalTimeValue {
+            color: #ffffff;
+        }
 
         /* 状态指示器 */
         .mode-indicator {
@@ -1206,6 +1233,11 @@
         <input type="text" class="quick-nav-search" id="quickNavSearch" placeholder="搜索配置组...">
         <!-- 新增排除输入框 -->
         <input type="text" class="quick-nav-search" id="quickNavExclude" placeholder="排除配置组...">
+        <!-- 新增：总时长显示 -->
+        <div id="quickNavTotalTime"
+            style="padding: 5px 8px; font-size: 12px; color: #666; border-bottom: 1px solid #ddd; text-align: center;">
+            总时长: <span id="quickNavTotalTimeValue">0</span>
+        </div>
         <div id="quickNavItems"></div>
     </div>
 
@@ -3281,7 +3313,7 @@
                         }
 
                         // 6. 战斗脚本设置错误
-                        if (line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')||line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"')) {
+                        if (line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"') || line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"')) {
                             const message = '未匹配到任何战斗脚本';
                             const type = 'combat-script-error';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3392,7 +3424,7 @@
                         }
 
                         // 13. 选项列表不存在传送点  重试
-                        if (line.includes("选项列表不存在传送点  重试")||line.includes("传送点未激活或不存在  重试")) {
+                        if (line.includes("选项列表不存在传送点  重试") || line.includes("传送点未激活或不存在  重试")) {
                             const message = '传送点不存在';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3642,19 +3674,6 @@
                             }
                         }
 
-                        // const pickMatch = line.match(/交互或拾取："(.+?)"/);
-
-                        // if (pickMatch) {
-                        //     const itemName = pickMatch[1];
-                        //     currentTask.picks.set(itemName, (currentTask.picks.get(itemName) || 0) + 1);
-                        //     currentGroup.picks.set(itemName, (currentGroup.picks.get(itemName) || 0) + 1);
-
-                        //     // 新增：记录拾取顺序
-                        //     if (!currentTask.pickSequence) {
-                        //         currentTask.pickSequence = [];
-                        //     }
-                        //     currentTask.pickSequence.push(itemName);
-                        // }
                         const pickPatterns = [
                             /交互或拾取："(.+?)"/,          // 原有模式
                             /尝试钓取 "(.+?)"/,             // 釣魚模式
@@ -6547,6 +6566,7 @@
 
             const groups = document.querySelectorAll('.group-container');
             let hasVisibleGroups = false;
+            let totalDurationSeconds = 0; // 新增：用于累计总时长（秒）
 
             groups.forEach((group, index) => {
                 // 检查配置组是否可见
@@ -6578,17 +6598,27 @@
 
                 quickNavItems.appendChild(navItem);
                 hasVisibleGroups = true;
+                
+                // 新增：累加总时长
+                const durationInSeconds = extractDurationFromTitle(fullTitle);
+                totalDurationSeconds += durationInSeconds;
             });
+            
+            // 新增：更新总时长显示
+            updateTotalDurationDisplay(totalDurationSeconds);
 
             // 如果没有可见的配置组，显示提示
             if (!hasVisibleGroups) {
                 const noResults = document.createElement('div');
-                noResults.className = 'quick-nav-item';
+                noResults.className = 'quick-nav-item no-results';
                 noResults.textContent = '没有可见的配置组';
                 noResults.style.cursor = 'default';
                 noResults.style.color = '#999';
                 noResults.style.fontStyle = 'italic';
                 quickNavItems.appendChild(noResults);
+
+                // 新增：如果没有可见配置组，总时长显示为0
+                updateTotalDurationDisplay(0);
             }
         }
 
@@ -6672,6 +6702,7 @@
                 : [];
 
             let hasMatches = false;
+            let totalDurationSeconds = 0; // 新增：用于累计总时长（秒）
 
             navItems.forEach(item => {
                 // 跳过"没有可见的配置组"提示
@@ -6699,10 +6730,20 @@
                 if (matchesInclude && matchesExclude) {
                     item.style.display = 'block';
                     hasMatches = true;
+
+                    // 新增：获取该配置组的时长并累加
+                    const fullTitle = item.getAttribute('data-full-title');
+                    if (fullTitle) {
+                        const durationInSeconds = extractDurationFromTitle(fullTitle);
+                        totalDurationSeconds += durationInSeconds;
+                    }
                 } else {
                     item.style.display = 'none';
                 }
             });
+            
+            // 更新总时长显示
+            updateTotalDurationDisplay(totalDurationSeconds);
 
             // 更新提示信息，显示当前的过滤条件
             const quickNavItems = document.getElementById('quickNavItems');
@@ -6730,6 +6771,29 @@
                 noResults.remove();
             }
         }
+        
+        // 新增：从配置组标题中提取时长（秒）
+        function extractDurationFromTitle(fullTitle) {
+            // 示例标题格式："配置組：自動釣魚　下 (2025/05/23 07:19:45 - 2025/05/23 09:34:18) 耗时2小时14分钟33秒"
+            const durationMatch = fullTitle.match(/耗时(.+秒)/);
+
+            if (durationMatch) {
+                const durationText = durationMatch[1];
+                return parseDurationToSeconds(durationText);
+            }
+
+            return 0;
+        }
+
+        // 新增：更新总时长显示
+        function updateTotalDurationDisplay(totalSeconds) {
+            const totalTimeValueElement = document.getElementById('quickNavTotalTimeValue');
+            if (totalTimeValueElement) {
+                const formattedDuration = formatDuration(totalSeconds);
+                totalTimeValueElement.textContent = formattedDuration;
+            }
+        }
+        
         // 刷新导航可见项 - 在筛选或隐藏操作后调用
         function refreshQuickNav() {
             if (quickNavVisible) {
