@@ -1664,9 +1664,9 @@
                 setTimeout(() => {
                     debouncedAdjustTableHeader();
                 }, 150);
-                showQuickNavToggle();
                 // 标记已有日志数据
                 hasLogData = true;
+                showQuickNavToggle();
             } catch (e) {
                 document.getElementById('dropZone').innerHTML = `<div class="error">解析失败：${e.message}</div>`;
                 hideQuickNavToggle();
@@ -2098,9 +2098,9 @@
                 if (hasLogData = true) {
                     refreshHTML();
                 }
-                showQuickNavToggle();
                 // 标记已有日志数据
                 hasLogData = true;
+                showQuickNavToggle();
             } catch (e) {
                 dropZone.innerHTML = `<div class="error">解析失败：${e.message}</div>`;
                 hideQuickNavToggle();
@@ -6775,11 +6775,19 @@
         // 新增：从配置组标题中提取时长（秒）
         function extractDurationFromTitle(fullTitle) {
             // 示例标题格式："配置組：自動釣魚　下 (2025/05/23 07:19:45 - 2025/05/23 09:34:18) 耗时2小时14分钟33秒"
-            const durationMatch = fullTitle.match(/耗时(.+秒)/);
+            // 或 "配置組：鋤JS-精英 (2025/12/26 04:20:24 - 2025/12/26 08:08:24) 耗时3小时48分钟"
+            const durationMatch = fullTitle.match(/耗时(.+)$/);
 
             if (durationMatch) {
-                const durationText = durationMatch[1];
-                return parseDurationToSeconds(durationText);
+                const durationText = durationMatch[1].trim();
+
+                // 處理沒有"秒"的情況 - 添加"0秒"
+                let textToParse = durationText;
+                if (!textToParse.includes('秒')) {
+                    textToParse += '0秒';
+                }
+
+                return parseDurationToSeconds(textToParse);
             }
 
             return 0;
