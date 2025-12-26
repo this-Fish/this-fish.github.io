@@ -5283,7 +5283,19 @@
 
                 countPickups();
                 e.preventDefault();
+            } else if (keyNum.keyCode == 113) { // F2 鍵 - 快速上傳文件
+                // 防止在輸入框中觸發
+                const activeElement = document.activeElement;
+                const tagName = activeElement.tagName.toLowerCase();
+                if (tagName === 'input' || tagName === 'textarea') {
+                    return; // 讓輸入框正常處理按鍵
+                }
+
+                // 直接觸發文件選擇對話框
+                document.getElementById('fileInput').click();
+                e.preventDefault();
             }
+            
 
             // 在每个快捷键处理完后，更新对应的按钮状态
             if ([192, 84, 89, 73, 80, 74].includes(keyNum.keyCode)) {
