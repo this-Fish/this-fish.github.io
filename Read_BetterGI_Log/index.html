@@ -3638,6 +3638,30 @@
                             }
                         }
                         
+                        // 30. 战斗过程检测到游泳，前往七天神像重试
+                        if (line.includes('游泳检测：尝试回到战斗地点')) {
+                            const message = '战斗时游泳，回战斗地点';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 31. 战斗过程检测到游泳，前往七天神像重试
+                        if (line.includes('战斗过程检测到游泳，前往七天神像重试')) {
+                            const message = '战斗时游泳，回七天神像';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+                        
                         // 997. 检测到空月祝福界面，自动点击
                         if (line.includes('检测到空月祝福界面，自动点击')) {
                             const message = '领取空月祝福';
