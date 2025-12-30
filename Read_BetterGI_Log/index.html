@@ -3601,6 +3601,7 @@
                         if (line.includes('坐标获取异常，不记录运行数据')) {
                             const message = '终点坐标异常，不记录';
                             const type = 'abnormal-alert';
+                            currentTask.faults.too_far_skip++;
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
