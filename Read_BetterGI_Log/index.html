@@ -556,7 +556,7 @@
             background: rgba(255, 255, 255, 1);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
-        
+
         #quickNavTotalTime {
             font-size: 12px;
             color: #333;
@@ -2139,7 +2139,7 @@
                     updateSortButtons();
                 });
             });
-            
+
             function applySorting(tbody, isLegacy) {
                 if (isLegacy) {
                     sortLegacyTableByAll(tbody);
@@ -2909,7 +2909,8 @@
                         tasks: [],
                         picks: new Map(),
                         lastActive: null,
-                        teamRoles: new Set()  // 新增：存储不同的队伍角色组合
+                        teamRoles: new Set(),
+                        hasRotationTargeting: false  // 新增：旋转索敌标记
                     };
                     group.lastActive = parseTime(prevLine, fileDate);
                     parsingContext.activeGroups.set(groupName, group);
@@ -3005,6 +3006,11 @@
                             const teamRoleStr = match[1];
                             currentGroup.teamRoles.add(teamRoleStr);
                         }
+                    }
+
+                    // 檢測旋轉索敵
+                    if (line.includes('敌人位置: (') && line.includes('血量高度:')) {
+                        currentGroup.hasRotationTargeting = true;
                     }
 
                     // 检测自动战斗开始
@@ -3596,7 +3602,7 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-                        
+
                         // 27.鋤地一條龍(坐标获取异常，不记录运行数据)
                         if (line.includes('坐标获取异常，不记录运行数据')) {
                             const message = '终点坐标异常，不记录';
@@ -3638,7 +3644,7 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-                        
+
                         // 30. 战斗过程检测到游泳，前往七天神像重试
                         if (line.includes('游泳检测：尝试回到战斗地点')) {
                             const message = '战斗时游泳，回战斗地点';
@@ -3662,7 +3668,7 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-                        
+
                         // 997. 检测到空月祝福界面，自动点击
                         if (line.includes('检测到空月祝福界面，自动点击')) {
                             const message = '领取空月祝福';
@@ -4023,6 +4029,11 @@
                             displayText += `   (${roleNotes.join(' ')})`;
                         }
 
+                        // 旋轉索敵
+                        if (group.hasRotationTargeting) {
+                            displayText += ` (旋转索敌)`;
+                        }
+
                         return `<div class="team-role-line">${displayText}</div>`;
                     }).join('')}
                                 </div>
@@ -4298,6 +4309,11 @@
                         // 如果有標注，添加到顯示文本
                         if (roleNotes.length > 0) {
                             displayText += `   (${roleNotes.join(' ')})`;
+                        }
+
+                        // 旋轉索敵
+                        if (group.hasRotationTargeting) {
+                            displayText += ` (旋转索敌)`;
                         }
 
                         return `<div class="team-role-line">${displayText}</div>`;
@@ -5321,10 +5337,10 @@
                 e.preventDefault();
             } else if (keyNum.keyCode == 219) { // [ 鍵 - 自由编辑网页
                 // 防止在輸入框中觸發
-                "true" === document.body.getAttribute("contenteditable") ?(document.body.setAttribute("contenteditable", false), alert("关闭自由编辑网页！")) :(document.body.setAttribute("contenteditable", true), alert("启用自由编辑网页！"))
+                "true" === document.body.getAttribute("contenteditable") ? (document.body.setAttribute("contenteditable", false), alert("关闭自由编辑网页！")) : (document.body.setAttribute("contenteditable", true), alert("启用自由编辑网页！"))
                 e.preventDefault();
             }
-            
+
 
             // 在每个快捷键处理完后，更新对应的按钮状态
             if ([192, 84, 89, 73, 80, 74].includes(keyNum.keyCode)) {
@@ -5643,13 +5659,13 @@
             if (isSequenceMode) {
                 // 按拾取顺序模式：直接統計關鍵字出現次數
                 const items = picksText.split(',').map(item => item.trim());
-                
+
                 items.forEach(item => {
                     // 檢查物品名稱是否包含任一關鍵字
-                    const matchesAnyKeyword = itemNames.some(keyword => 
+                    const matchesAnyKeyword = itemNames.some(keyword =>
                         item.toLowerCase().includes(keyword.toLowerCase())
                     );
-                    
+
                     if (matchesAnyKeyword) {
                         totalCount += 1; // 每個匹配的物品計為1
                     }
@@ -5663,7 +5679,7 @@
                     const trimmedItem = item.trim();
 
                     // 检查物品名称是否包含任一关键字
-                    const matchesAnyKeyword = itemNames.some(keyword => 
+                    const matchesAnyKeyword = itemNames.some(keyword =>
                         trimmedItem.toLowerCase().includes(keyword.toLowerCase())
                     );
 
@@ -6639,12 +6655,12 @@
 
                 quickNavItems.appendChild(navItem);
                 hasVisibleGroups = true;
-                
+
                 // 新增：累加总时长
                 const durationInSeconds = extractDurationFromTitle(fullTitle);
                 totalDurationSeconds += durationInSeconds;
             });
-            
+
             // 新增：更新总时长显示
             updateTotalDurationDisplay(totalDurationSeconds);
 
@@ -6782,7 +6798,7 @@
                     item.style.display = 'none';
                 }
             });
-            
+
             // 更新总时长显示
             updateTotalDurationDisplay(totalDurationSeconds);
 
@@ -6812,7 +6828,7 @@
                 noResults.remove();
             }
         }
-        
+
         // 新增：从配置组标题中提取时长（秒）
         function extractDurationFromTitle(fullTitle) {
             // 示例标题格式："配置組：自動釣魚　下 (2025/05/23 07:19:45 - 2025/05/23 09:34:18) 耗时2小时14分钟33秒"
@@ -6842,7 +6858,7 @@
                 totalTimeValueElement.textContent = formattedDuration;
             }
         }
-        
+
         // 刷新导航可见项 - 在筛选或隐藏操作后调用
         function refreshQuickNav() {
             if (quickNavVisible) {
