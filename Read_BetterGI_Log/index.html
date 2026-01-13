@@ -3743,6 +3743,19 @@
                             }
                         }
 
+                        // LCB版
+                        // 900. 网络恢复中...
+                        if (line.includes('网络恢复中...')) {
+                            const message = '网络恢复中...';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // 998. 用户取消，终止运行
                         if (line.includes('用户取消，终止运行') || line.includes('取消自动任务')) {
                             const message = '用户终止运行';
@@ -4269,7 +4282,7 @@
                     const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
 
                     // 生成拾取物显示文本
-                    let picksText = formatPicks(task.picks, task.pickSequence);
+                    let picksText = formatPicks(task.picks, task.pickSequence, true);
 
                     // 按顺序添加提示文本
                     const alerts = [];
@@ -4560,7 +4573,7 @@
                     const duration = calculateDuration(task.startTime, task.endTime);
 
                     // 生成拾取物显示文本
-                    let picksText = formatPicks(task.picks, task.pickSequence);
+                    let picksText = formatPicks(task.picks, task.pickSequence, true);
 
                     // 按顺序添加提示文本
                     const alerts = [];
@@ -4692,19 +4705,47 @@
         }
 
         // 修改格式化拾取物的函数，支持两种显示方式
-        function formatPicks(picks, pickSequence) {
+        function formatPicks(picks, pickSequence, excludeItems = false) {
             if (!picks || picks.size === 0) return '无';
+
+            // 需要排除的物品列表
+            // const excludeList = ['小怪', '精英'];
+            const excludeList = [];
+
+            // 过滤函数
+            const shouldExclude = (item) => {
+                if (!excludeItems) return false;
+                return excludeList.some(excluded => item.includes(excluded)); // 包含匹配
+                // return excludeList.includes(item); // 完全相等
+            };
 
             if (picksSortByCount) {
                 // 按数量从多到少排序（合并统计）
-                return Array.from(picks.entries())
+                const entries = Array.from(picks.entries());
+
+                // 如果需要排除，过滤掉排除的物品
+                const filteredEntries = excludeItems
+                    ? entries.filter(([item, count]) => !shouldExclude(item))
+                    : entries;
+
+                if (filteredEntries.length === 0) return '无';
+
+                return filteredEntries
                     .sort((a, b) => b[1] - a[1])
                     .map(([item, count]) => `${item} (${count})`)
                     .join(', ');
             } else {
                 // 按拾取顺序显示（不合并，重复的单独显示）
                 if (!pickSequence || pickSequence.length === 0) return '无';
-                return pickSequence.join(', ');
+
+                // 如果需要排除，过滤掉排除的物品
+                const filteredSequence = excludeItems
+                    ? pickSequence.filter(item => !shouldExclude(item))
+                    : pickSequence;
+
+                if (filteredSequence.length === 0) return '无';
+
+                return filteredSequence.join(', ');
             }
         }
 
