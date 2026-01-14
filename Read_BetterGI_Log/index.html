@@ -3241,9 +3241,11 @@
                             currentTask.faults.teleport = parseInt(RegExp.$1);
                         // if (line.includes("重试一次路线")) currentTask.faults.retry++;
                         if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
-                        if (line.includes("疑似卡死，尝试脱离...")) {
+                        if (line.includes("疑似卡死，尝试脱离...") || line.includes("疑似卡死，尝试随机脱离...") || line.includes("尝试朝向上一个节点")) {
                             currentTask.faults.retryDetail++;
-
+                            if (line.includes("尝试朝向上一个节点")) {
+                                currentTask.faults.retryDetail = currentTask.faults.retryDetail - 0.9;
+                            }
                             // 使用最近捕获的坐标
                             if (lastCoordForStuck) {
                                 if (!currentTask.faults.coords) {
@@ -3330,7 +3332,7 @@
                         }
 
                         // 2. 自动吃药
-                        if (line.includes('检测到红血且不在CD，自动吃药')) {
+                        if (line.includes('检测到红血且不在CD，自动吃药') || line.includes('自动吃药："发现红血" 使用小道具')) {
                             const message = '自动吃药';
                             const type = 'auto-potion';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3710,7 +3712,7 @@
                         // 30. 战斗过程检测到游泳，前往七天神像重试
                         if (line.includes('游泳检测：尝试回到战斗地点')) {
                             const message = '战斗时游泳，回战斗地点';
-                            const type = 'abnormal-alert';
+                            const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
@@ -4275,6 +4277,17 @@
                         }
                     }
 
+                    // 格式化retry值：整数显示整数，小数显示两位小数
+                    let retryDetail = '';
+                    if (task.faults.retryDetail !== 0) {
+                        if (Number.isInteger(task.faults.retryDetail)) {
+                            retryDetail = task.faults.retryDetail;
+                        } else {
+                            // 确保小数部分有两位
+                            retryDetail = task.faults.retryDetail.toFixed(2);
+                        }
+                    }
+
                     // 计算任务耗时
                     const duration = calculateDuration(task.startTime, task.endTime);
 
@@ -4316,7 +4329,7 @@
                     </td>
                     <td class="column-retry ${task.faults.retry >= 2 ? 'red' : ''}">${task.faults.retry == 0 ? '' : task.faults.retry}</td>
                     <td class="column-retry-detail ${cellClass} ${task.faults.retryDetail >= 2 ? '' : ''}">
-                        ${task.faults.retryDetail == 0 ? '' : task.faults.retryDetail}
+                        ${retryDetail}
                         ${coordPopupHTML}
                     </td>
                     <td class="column-too-far-skip ${task.faults.too_far_skip >= 2 ? 'red' : 'red'}">${task.faults.too_far_skip == 0 ? '' : task.faults.too_far_skip}</td>
@@ -4569,6 +4582,17 @@
                         }
                     }
 
+                    // 格式化retry值：整数显示整数，小数显示两位小数
+                    let retryDetail = '';
+                    if (task.faults.retryDetail !== 0) {
+                        if (Number.isInteger(task.faults.retryDetail)) {
+                            retryDetail = task.faults.retryDetail;
+                        } else {
+                            // 确保小数部分有两位
+                            retryDetail = task.faults.retryDetail.toFixed(2);
+                        }
+                    }
+
                     // 计算任务耗时
                     const duration = calculateDuration(task.startTime, task.endTime);
 
@@ -4607,7 +4631,7 @@
                     </td>
                     <td class="column-retry ${task.faults.retry >= 2 ? 'red' : ''}">${task.faults.retry == 0 ? '' : task.faults.retry}</td>
                     <td class="column-retry-detail ${cellClass} ${task.faults.retryDetail >= 2 ? '' : ''}">
-                        ${task.faults.retryDetail == 0 ? '' : task.faults.retryDetail}
+                        ${retryDetail}
                         ${coordPopupHTML}
                     </td>
                     <td class="column-too-far-skip ${task.faults.too_far_skip >= 2 ? 'red' : 'red'}">${task.faults.too_far_skip == 0 ? '' : task.faults.too_far_skip}</td>
