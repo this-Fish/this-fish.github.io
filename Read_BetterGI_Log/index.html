@@ -3446,7 +3446,7 @@
                         }
 
                         //10.1
-                        if (line.includes("当前获取焦点的窗口不是原神，暂停")) {
+                        if (line.includes("当前获取焦点的窗口不是原神，暂停") || (line.includes("当前获取焦点的窗口为: ") && line.includes("，不是原神，暂停"))) {
                             const message = '窗口焦点异常，暂停';
                             const type = 'pause-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3668,7 +3668,8 @@
                         }
 
                         // 27.鋤地一條龍(坐标获取异常，不记录运行数据)
-                        if (line.includes('坐标获取异常，不记录运行数据')) {
+                        if (line.includes('坐标获取异常，不记录运行数据') ||
+                            (line.includes('出现异常') && line.includes('不记录cd'))) {
                             const message = '终点坐标异常，不记录';
                             const type = 'abnormal-alert';
                             currentTask.faults.too_far_skip++;
