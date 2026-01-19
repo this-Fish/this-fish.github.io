@@ -287,7 +287,6 @@
         }
 
         .legacy-format .main-row-name {
-            font-weight: normal;
             background-color: #f0f0f0;
         }
 
@@ -1163,6 +1162,13 @@
         body.dark-theme .legacy-format .sort-btn {
             color: #fff;
         }
+
+        /* 任务数量显示样式 */
+        .task-count {
+            float: right;
+            font-size: 12px;
+            font-weight: normal;
+        }
     </style>
 </head>
 
@@ -1937,6 +1943,7 @@
             // 筛选后调整表头位置
             setTimeout(() => {
                 adjustTableHeaderPosition();
+                updateTaskCounts(); // 更新任务数量显示
                 refreshQuickNav();
             }, 50);
         }
@@ -1977,6 +1984,7 @@
             // 重新调整表头位置
             setTimeout(() => {
                 adjustTableHeaderPosition();
+                updateTaskCounts(); // 更新任务数量显示
                 refreshQuickNav();
             }, 50);
         }
@@ -4139,7 +4147,10 @@
                 // 修改表头，在拾取物列添加效率按钮
                 html += `
                     <tr class="sticky-header">
-                        <th data-sort-type="string">任务名称</th>
+                        <th data-sort-type="string">
+                            任务名称
+                            <span class="task-count">${group.tasks.length}个</span>
+                        </th>
                         <th class="column-start-time">
                             开始时间 
                             <btn class="sort-btn" style="font-size:15px;padding:1px 4px;margin-left:3px;cursor:pointer;" 
@@ -4448,7 +4459,10 @@
 
                 html += `
                     <tr class="sticky-header">
-                        <th data-sort-type="string">任务名称</th>
+                        <th data-sort-type="string">
+                            任务名称
+                            <span class="task-count">${group.tasks.length}个</span>
+                        </th>
                         <th class="column-start-time">
                             开始时间 
                             <btn class="sort-btn" style="font-size:15px;padding:1px 4px;margin-left:3px;cursor:pointer;" 
@@ -4954,8 +4968,8 @@
             setTimeout(() => {
                 adjustTableHeaderPosition();
                 setupSortButtons();
-
                 dropZone.scrollTop = 0;
+                updateTaskCounts(); // 重新计算任务数量
             }, 200); // 延迟100ms确保DOM完全渲染
 
             // 恢复状态
@@ -4995,6 +5009,7 @@
                     }
                     updateButtonState(74);
                     updateButtonState(72);
+                    updateTaskCounts();// 更新任务数量显示
                 }, 150);
             }
 
@@ -6267,6 +6282,21 @@
                 // 如果配置组没有可见任务且处于隐藏模式，隐藏整个配置组
                 if (hideZeroStatsTasks && !hasVisibleTask) {
                     container.style.display = 'none';
+                }
+            });
+        }
+
+        // 添加更新任务数量的逻辑
+        function updateTaskCounts() {
+            const tables = document.querySelectorAll('table');
+
+            tables.forEach(table => {
+                const container = table.closest('.group-container');
+                const visibleTasks = container.querySelectorAll('tr[data-original-index]:not([style*="display: none"])').length;
+                const taskCountElement = table.querySelector('.task-count');
+
+                if (taskCountElement) {
+                    taskCountElement.textContent = `${visibleTasks}个`;
                 }
             });
         }
