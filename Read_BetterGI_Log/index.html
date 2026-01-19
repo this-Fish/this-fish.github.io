@@ -3677,7 +3677,11 @@
 
                         // 27.鋤地一條龍(坐标获取异常，不记录运行数据)
                         if (line.includes('坐标获取异常，不记录运行数据') ||
-                            (line.includes('出现异常') && line.includes('不记录cd'))) {
+                                (line.includes('出现异常') && line.includes('不记录cd')) ||
+                                line.includes('出发点与终点过于接近，不记录运行数据') ||
+                                line.includes('位置几乎未变化，不更新刷新时间')
+                            
+                            ) {
                             const message = '终点坐标异常，不记录';
                             const type = 'abnormal-alert';
                             currentTask.faults.too_far_skip++;
