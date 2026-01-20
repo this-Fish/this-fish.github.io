@@ -1497,8 +1497,10 @@
                 // 电脑设备：如果参数指定显示，则显示；否则保持隐藏
                 if (boxParam === "true") {
                     document.getElementById('fileUploadContainer').classList.add('visible');
+                    uploadContainerVisible = true; // 根据参数设置显示，变量设为true
                 } else {
                     document.getElementById('fileUploadContainer').classList.remove('visible');
+                    uploadContainerVisible = false; // 根据参数设置隐藏，变量设为false
                 }
             }
 
