@@ -1439,13 +1439,33 @@
             allGroups: []
         };
 
+        // 取得URL参数
+        function getValue(varname) {
+            const url = window.location.href;
+            const urlObj = new URL(url);
+            const params = new URLSearchParams(urlObj.search);
+            return params.get(varname) || "";
+        }
+
         // 页面加载时显示帮助提示
         window.onload = function () {
-            const now = new Date();
-            const currentHour = now.getHours();
-            const minutes = now.getMinutes();
-            if ((currentHour < 6) || (currentHour === 6 && minutes <= 30)) {
+            // 首先读取URL参数
+            const themeParam = getValue("C");
+            const boxParam = getValue("LBox");
+
+            // 1. 设置主题（参数优先级最高）
+            if (themeParam === "1") {
                 document.body.classList.add('dark-theme');
+            } else if (themeParam === "0") {
+                document.body.classList.remove('dark-theme');
+            } else {
+                // 如果没有主题参数，使用原来的时间判断逻辑
+                const now = new Date();
+                const currentHour = now.getHours();
+                const minutes = now.getMinutes();
+                if ((currentHour < 6) || (currentHour === 6 && minutes <= 30)) {
+                    document.body.classList.add('dark-theme');
+                }
             }
 
             // 显示帮助提示
@@ -1474,8 +1494,12 @@
                 document.body.classList.add('mobile-device');
                 document.getElementById('fileUploadContainer').classList.add('visible');
             } else {
-                // 电脑设备保持隐藏状态
-                document.getElementById('fileUploadContainer').classList.remove('visible');
+                // 电脑设备：如果参数指定显示，则显示；否则保持隐藏
+                if (boxParam === "true") {
+                    document.getElementById('fileUploadContainer').classList.add('visible');
+                } else {
+                    document.getElementById('fileUploadContainer').classList.remove('visible');
+                }
             }
 
             // 初始化功能按钮状态
@@ -3677,11 +3701,10 @@
 
                         // 27.鋤地一條龍(坐标获取异常，不记录运行数据)
                         if (line.includes('坐标获取异常，不记录运行数据') ||
-                                (line.includes('出现异常') && line.includes('不记录cd')) ||
-                                line.includes('出发点与终点过于接近，不记录运行数据') ||
-                                line.includes('位置几乎未变化，不更新刷新时间')
-                            
-                            ) {
+                            (line.includes('出现异常') && line.includes('不记录cd')) ||
+                            line.includes('出发点与终点过于接近，不记录运行数据') ||
+                            line.includes('位置几乎未变化，不更新刷新时间')
+                        ) {
                             const message = '终点坐标异常，不记录';
                             const type = 'abnormal-alert';
                             currentTask.faults.too_far_skip++;
