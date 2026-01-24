@@ -3254,7 +3254,7 @@
                         if (line.includes("距离过远") && /\(\d+\.?\d*,\d+\.?\d*\)->\(\d+\.?\d*,\d+\.?\d*\)=\d+\.?\d*，跳过路径点/)
                             currentTask.faults.too_far_skip++;
 
-                        if (line.includes("，重试多次后仍然失败，放弃此路径点！")) {
+                        if (line.includes("，重试多次后仍然失败，放弃此路径点！") || line.includes("执行超时，放弃此次追踪")) {
                             const message = '路径识别失败，放弃路径';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
