@@ -3377,7 +3377,10 @@
                         }
 
                         // 6. 战斗脚本设置错误
-                        if (line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"') || line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"')) {
+                        if (
+                        line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')
+                         || line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"') 
+                         || line.includes('执行地图追踪时候发生错误: "战斗策略文件不存在"')) {
                             const message = '未匹配到任何战斗脚本';
                             const type = 'combat-script-error';
                             if (currentTask.specialAlerts.has(message)) {
