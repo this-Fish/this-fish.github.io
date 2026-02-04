@@ -3378,9 +3378,9 @@
 
                         // 6. 战斗脚本设置错误
                         if (
-                        line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')
-                         || line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"') 
-                         || line.includes('执行地图追踪时候发生错误: "战斗策略文件不存在"')) {
+                            line.includes('执行脚本时发生异常: "未匹配到任何战斗脚本"')
+                            || line.includes('执行地图追踪时候发生错误: "未匹配到任何战斗脚本"')
+                            || line.includes('执行地图追踪时候发生错误: "战斗策略文件不存在"')) {
                             const message = '未匹配到任何战斗脚本';
                             const type = 'combat-script-error';
                             if (currentTask.specialAlerts.has(message)) {
@@ -5507,6 +5507,9 @@
 
                 countPickups();
                 e.preventDefault();
+            } else if (keyNum.keyCode == 112) { // F1 鍵 - 打開 README.md
+                window.open("https://github.com/this-Fish/this-fish.github.io/tree/main/Read_BetterGI_Log");
+                e.preventDefault();
             } else if (keyNum.keyCode == 113) { // F2 鍵 - 快速上傳文件
                 // 防止在輸入框中觸發
                 const activeElement = document.activeElement;
@@ -5887,9 +5890,9 @@
             }
 
             // 小彩蛋-统计鍵快捷標記
-            if (input == "/1"){input="战狂,游医,教官,流放者"}
-            if (input == "/2"){input="拉扯结束"}
-            if (input == "/3"){input="小怪"}
+            if (input == "/1") { input = "战狂,游医,教官,流放者" }
+            if (input == "/2") { input = "拉扯结束" }
+            if (input == "/3") { input = "小怪" }
 
             const itemsToCount = input.split(',')
                 .map(item => item.trim())
