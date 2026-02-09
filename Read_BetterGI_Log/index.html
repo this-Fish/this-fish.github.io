@@ -1467,12 +1467,26 @@
             allGroups: []
         };
 
-        // 取得URL参数
+        // 取得URL参数（大小寫兼容）
         function getValue(varname) {
             const url = window.location.href;
             const urlObj = new URL(url);
             const params = new URLSearchParams(urlObj.search);
-            return params.get(varname) || "";
+
+            // 1. 首先嘗試原始大小寫
+            let value = params.get(varname);
+            if (value !== null) {
+                return value;
+            }
+
+            // 2. 如果沒有找到，嘗試小寫
+            const paramNames = Array.from(params.keys());
+            const matchedName = paramNames.find(name =>
+                name.toLowerCase() === varname.toLowerCase()
+            );
+
+            // 返回匹配的參數值，如果找不到則返回空字符串
+            return matchedName ? params.get(matchedName) : "";
         }
 
         // 页面加载时显示帮助提示
@@ -3251,8 +3265,13 @@
                             }
                         }
                         // if (line.includes("距离过远，跳过路径点")) currentTask.faults.too_far_skip++;
-                        if (line.includes("距离过远") && /\(\d+\.?\d*,\d+\.?\d*\)->\(\d+\.?\d*,\d+\.?\d*\)=\d+\.?\d*，跳过路径点/)
+                        // 0.56.后不傳回极大的坐标
+                        if (
+                            (line.includes("距离过远") && /\(\d+\.?\d*,\d+\.?\d*\)->\(\d+\.?\d*,\d+\.?\d*\)=\d+\.?\d*，跳过路径点/) ||
+                            line.includes("未识别到当前位置")
+                        ) {
                             currentTask.faults.too_far_skip++;
+                        }
 
                         if (line.includes("，重试多次后仍然失败，放弃此路径点！") || line.includes("执行超时，放弃此次追踪")) {
                             const message = '路径识别失败，放弃路径';
