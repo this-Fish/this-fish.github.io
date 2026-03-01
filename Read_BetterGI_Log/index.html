@@ -4939,8 +4939,8 @@
             // 保存当前状态
             const currentHideZeroStats = hideZeroStatsTasks;
             const currentFilterMode = isFilterMode;
-            currentFilterKeywords = [...currentFilterKeywords];
-            currentExcludeGroupKeywords = [...currentExcludeGroupKeywords];
+            const currentFilterKeywords = [...currentFilterKeywords];
+            const currentExcludeGroupKeywords = [...currentExcludeGroupKeywords];
 
             const currentPickEfficiencyMode = isPickEfficiencyMode; // 保存拾取效率模式状态
             currentPickEfficiencyItem = currentPickEfficiencyItem; // 保存当前计算的物品
@@ -6411,20 +6411,22 @@
 
             tables.forEach(table => {
                 const container = table.closest('.group-container');
+
+                // 如果配置组已被 H 键排除（display: none），则跳过整个表格
+                if (container.style.display === 'none') {
+                    return;
+                }
+
                 const groupHeader = container.querySelector('.group-header h2');
                 const groupName = groupHeader ? groupHeader.textContent : '';
 
                 // 确保队伍角色行始终显示
                 const teamRolesRow = table.querySelector('.team-roles-row');
-                if (teamRolesRow) {
-                    teamRolesRow.style.display = ''; // 确保显示
-                }
+                if (teamRolesRow) teamRolesRow.style.display = '';
 
                 // 确保拾取物行保持隐藏
                 const summaryRows = table.querySelectorAll('.summary-row');
-                summaryRows.forEach(row => {
-                    row.style.display = 'none';
-                });
+                summaryRows.forEach(row => row.style.display = 'none');
 
                 let groupHasVisibleTask = false;
 
@@ -6488,20 +6490,22 @@
                 } else {
                     // 普通任务筛选模式（H键筛选）
 
-                    // 第一步：检查配置组名是否匹配关键字
-                    const groupMatchesKeyword = currentFilterKeywords.some(keyword =>
+                    // 如果没有包含关键字，则直接认为所有未排除的组都匹配
+                    const noIncludeKeywords = currentFilterKeywords.length === 0;
+
+                    // 检查配置组名是否匹配关键字（仅在有关键字时进行）
+                    const groupMatchesKeyword = !noIncludeKeywords && currentFilterKeywords.some(keyword =>
                         groupName.toLowerCase().includes(keyword.toLowerCase())
                     );
 
-                    // 如果配置组名匹配，显示组内所有非零统计任务
-                    if (groupMatchesKeyword) {
+                    if (noIncludeKeywords || groupMatchesKeyword) {
+                        // 没有包含关键字 或 配置组名匹配：显示组内所有任务，并应用零统计
                         if (!useLegacyFormat) {
                             const rows = table.querySelectorAll('tr');
                             rows.forEach(row => {
                                 // 跳过表头行、队伍角色行和summary-row
                                 if (row.querySelector('th') || row.classList.contains('team-roles-row') || row.classList.contains('summary-row')) {
                                     if (row.classList.contains('summary-row')) {
-                                        // 在普通筛选模式下，无论配置组名是否匹配，summary-row都保持隐藏
                                         row.style.display = 'none';
                                     } else {
                                         row.style.display = '';
@@ -6533,7 +6537,6 @@
                                     if (matchesStats) {
                                         const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
                                         relatedRows.forEach(r => {
-                                            // 跳过summary-row
                                             if (!r.classList.contains('summary-row')) {
                                                 r.style.display = '';
                                             }
@@ -6541,16 +6544,13 @@
                                         groupHasVisibleTask = true;
                                     } else {
                                         const relatedRows = table.querySelectorAll(`tr[data-task-id="${taskId}"]`);
-                                        relatedRows.forEach(r => {
-                                            r.style.display = 'none';
-                                        });
+                                        relatedRows.forEach(r => r.style.display = 'none');
                                     }
                                 }
                             });
                         }
-                    }
+                    } else {
                     // 配置组名不匹配，检查任务名是否匹配关键字
-                    else {
                         if (!useLegacyFormat) {
                             const rows = table.querySelectorAll('tr');
                             rows.forEach(row => {
@@ -6630,7 +6630,6 @@
                     container.style.display = '';
                 }
             });
-
         }
 
         // 非筛选模式下的零统计筛选
