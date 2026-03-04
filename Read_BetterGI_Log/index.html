@@ -1,4 +1,4 @@
-<!--20260302-->
+<!--20260305-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3476,7 +3476,7 @@
                         }
 
                         // 10. 当前获取焦点的窗口不是原神，尝试恢复窗口
-                        if (line.includes("当前获取焦点的窗口不是原神，尝试恢复窗口")) {
+                        if (line.includes("当前获取焦点的窗口不是原神，尝试恢复窗口") || (line.includes("当前获取焦点的窗口为: ") && line.includes("，不是原神，尝试恢复窗口"))) {
                             const message = '窗口焦点异常，尝试恢复';
                             const type = 'pause-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -6551,7 +6551,7 @@
                             });
                         }
                     } else {
-                    // 配置组名不匹配，检查任务名是否匹配关键字
+                        // 配置组名不匹配，检查任务名是否匹配关键字
                         if (!useLegacyFormat) {
                             const rows = table.querySelectorAll('tr');
                             rows.forEach(row => {
