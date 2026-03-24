@@ -1,4 +1,4 @@
-<!--20260306-->
+<!--20260324-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3774,6 +3774,18 @@
                         // 31. 战斗过程检测到游泳，前往七天神像重试
                         if (line.includes('战斗过程检测到游泳，前往七天神像重试')) {
                             const message = '战斗时游泳，回七天神像';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 32. 游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！
+                        if (line.includes('游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！')) {
+                            const message = '游戏窗口分辨率错误';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
