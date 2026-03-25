@@ -1,4 +1,4 @@
-<!--20260324-->
+<!--20260325-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -991,7 +991,6 @@
             }
 
             #fileUploadContainer {
-                display: block;
             }
 
             #mobileControls {
@@ -1533,18 +1532,24 @@
             const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-            // 如果是移动设备，添加移动设备类并显示文件上传区域
-            if (isMobileDevice || hasTouchScreen) {
-                document.body.classList.add('mobile-device');
+            // 优先使用 URL 参数 LBox 控制显示状态
+            if (boxParam === "true") {
+                // 强制显示上传区域
                 document.getElementById('fileUploadContainer').classList.add('visible');
+                uploadContainerVisible = true;
+            } else if (boxParam === "false") {
+                // 强制隐藏上传区域
+                document.getElementById('fileUploadContainer').classList.remove('visible');
+                uploadContainerVisible = false;
             } else {
-                // 电脑设备：如果参数指定显示，则显示；否则保持隐藏
-                if (boxParam === "true") {
+                // 未指定 LBox 参数时，按移动设备检测决定
+                if (isMobileDevice || hasTouchScreen) {
+                    document.body.classList.add('mobile-device');
                     document.getElementById('fileUploadContainer').classList.add('visible');
-                    uploadContainerVisible = true; // 根据参数设置显示，变量设为true
+                    uploadContainerVisible = true;
                 } else {
                     document.getElementById('fileUploadContainer').classList.remove('visible');
-                    uploadContainerVisible = false; // 根据参数设置隐藏，变量设为false
+                    uploadContainerVisible = false;
                 }
             }
 
