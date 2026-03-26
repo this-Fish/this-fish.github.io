@@ -1,4 +1,4 @@
-<!--20260325-->
+<!--20260326-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3447,6 +3447,21 @@
                             if (match) {
                                 const message = `队伍缺少 ${match[1]} 元素采集角色`;
                                 const type = 'element-missing';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+                        }
+
+                        // 7.5 切人失败,无法进行"X"元素采集
+                        if (line.includes('切人失败,无法进行"') && line.includes('元素采集')) {
+                            const match = line.match(/切人失败,无法进行"(.+?)"元素采集/);
+                            if (match) {
+                                const message = `切人失败,无法进行 ${match[1]} 元素采集`;
+                                const type = 'purple-alert';
                                 if (currentTask.specialAlerts.has(message)) {
                                     const existing = currentTask.specialAlerts.get(message);
                                     existing.count++;
