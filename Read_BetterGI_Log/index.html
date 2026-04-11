@@ -1,4 +1,4 @@
-<!--20260326-->
+<!--20260412-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -988,9 +988,6 @@
             th,
             td {
                 padding: 6px 4px;
-            }
-
-            #fileUploadContainer {
             }
 
             #mobileControls {
@@ -3278,6 +3275,9 @@
                         if (line.includes("当前角色血量过低")) currentTask.faults.revive = currentTask.faults.revive - 0.9;
                         if (line.match(/传送失败，重试 (\d+) 次/))
                             currentTask.faults.teleport = parseInt(RegExp.$1);
+                        if (line.match(/执行地图追踪时候发生错误: "传送失败"/)) {
+                            currentTask.faults.teleport += 1;
+                        }
                         // if (line.includes("重试一次路线")) currentTask.faults.retry++;
                         if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
                         if (line.includes("疑似卡死，尝试脱离...") || line.includes("疑似卡死，尝试随机脱离...") || line.includes("尝试朝向上一个节点")) {
