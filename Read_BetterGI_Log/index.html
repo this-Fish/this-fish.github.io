@@ -3302,7 +3302,7 @@
                         }
 
                         if (line.includes("，重试多次后仍然失败，放弃此路径点！") || line.includes("执行超时，放弃此次追踪")) {
-                            const message = '路径识别失败，放弃路径';
+                            const message = '路径识别失败，放弃部份路径';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
