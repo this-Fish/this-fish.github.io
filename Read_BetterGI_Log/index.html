@@ -1,4 +1,4 @@
-<!--20260412-->
+<!--20260414-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3821,6 +3821,24 @@
                                 existing.count++;
                             } else {
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 33.鋤地一條龍2.8.0(使用复活料理 & 使用回血料理)
+                        if (line.match(/交互或拾取："使用(复活|回血)料理"/)) {
+                            const match = line.match(/交互或拾取："使用(复活|回血)料理"/);
+                            if (match) {
+                                const foodType = match[1]; // 获取捕获组中的 '复活' 或 '回血'
+                                const message = `使用${foodType}料理`;
+                                const type = 'purple-alert';
+
+                                // 优化 Map 的更新逻辑
+                                const existing = currentTask.specialAlerts.get(message);
+                                if (existing) {
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
                             }
                         }
 
