@@ -3830,7 +3830,7 @@
                             if (match) {
                                 const foodType = match[1]; // 获取捕获组中的 '复活' 或 '回血'
                                 const message = `使用${foodType}料理`;
-                                const type = 'purple-alert';
+                                const type = 'auto-potion';
 
                                 // 优化 Map 的更新逻辑
                                 const existing = currentTask.specialAlerts.get(message);
@@ -6000,6 +6000,7 @@
             if (input == "/1") { input = "战狂,游医,教官,流放者" }
             if (input == "/2") { input = "拉扯结束" }
             if (input == "/3") { input = "小怪" }
+            if (input == "/4") { input = "回血,复活" }
 
             const itemsToCount = input.split(',')
                 .map(item => item.trim())
