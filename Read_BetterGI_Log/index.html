@@ -1,4 +1,4 @@
-<!--20260414-->
+<!--20260415-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -6000,7 +6000,7 @@
             if (input == "/1") { input = "战狂,游医,教官,流放者" }
             if (input == "/2") { input = "拉扯结束" }
             if (input == "/3") { input = "小怪" }
-            if (input == "/4") { input = "回血,复活" }
+            if (input == "/4") { input = "使用回血料理,使用复活料理" }
 
             const itemsToCount = input.split(',')
                 .map(item => item.trim())
@@ -6041,8 +6041,11 @@
                     return; // 跳过汇总行
                 }
 
-                // 获取拾取物文本
-                const text = cell.textContent.trim();
+                // 克隆单元格并移除特殊事件提示（如 <span class="abnormal-alert">用户终止运行 (7)</span>）
+                const cellClone = cell.cloneNode(true);
+                cellClone.querySelectorAll('.abnormal-alert, .auto-potion, .warning, .info').forEach(span => span.remove());
+
+                const text = cellClone.textContent.trim();
                 if (text === '无' || text === '') {
                     return; // 跳过无拾取物的单元格
                 }
