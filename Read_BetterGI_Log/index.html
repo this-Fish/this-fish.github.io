@@ -1,4 +1,4 @@
-<!--20260420-->
+<!--20260426-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3301,7 +3301,7 @@
                             currentTask.faults.too_far_skip++;
                         }
 
-                        if (line.includes("，重试多次后仍然失败，放弃此路径点！") || line.includes("执行超时，放弃此次追踪")) {
+                        if (line.includes("，重试多次后仍然失败，放弃此路径点！") ) {
                             const message = '路径识别失败，放弃部份路径';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3842,6 +3842,19 @@
                             }
                         }
 
+                        // LCB版
+                        // 900. 网络恢复中...
+                        if (line.includes('网络恢复中...')) {
+                            const message = '网络恢复中...';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // 996. 进入剧情，自动点击剧情直到结束
                         if (line.includes('进入剧情')) {
                             const message = '进入剧情';
@@ -3853,11 +3866,11 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
-                        
-                        // 997. 检测到空月祝福界面，自动点击
-                        if (line.includes('检测到空月祝福界面，自动点击')) {
-                            const message = '领取空月祝福';
-                            const type = 'purple-alert';
+
+                        // 995. 执行超时，放弃此次追踪
+                        if (line.includes("执行超时，放弃此次追踪")) {
+                            const message = '路径点执行超时，放弃整条路径';
+                            const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
@@ -3866,10 +3879,9 @@
                             }
                         }
 
-                        // LCB版
-                        // 900. 网络恢复中...
-                        if (line.includes('网络恢复中...')) {
-                            const message = '网络恢复中...';
+                        // 997. 检测到空月祝福界面，自动点击
+                        if (line.includes('检测到空月祝福界面，自动点击')) {
+                            const message = '领取空月祝福';
                             const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
