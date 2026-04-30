@@ -1,4 +1,4 @@
-<!--20260426-->
+<!--20260501-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -2961,11 +2961,61 @@
                     }
                 }
 
+                function finalizeGroup(group, endTime) {
+                    if (!group.endTime) {
+                        group.endTime = endTime;
+                    }
+                    // 检查是否有有效任务（可复用 hasTaskActualContent 逻辑）
+                    let hasValidTasks = false;
+                    group.tasks.forEach(task => {
+                        if (hasTaskActualContent(task)) hasValidTasks = true;
+                    });
+                    if (!hasValidTasks) {
+                        group.skipped = true;
+                        return; // 跳过的组不处理角色信息
+                    }
+                    // 汇总配置组角色信息（原代码中“配置组结束”部分的处理）
+                    const groupSurvivalRoles = new Map();
+                    const groupWalkRoles = new Map();
+                    const groupDashRoles = new Map();
+                    group.tasks.forEach(task => {
+                        if (task.survivalRoles && task.survivalRoles.length > 0) {
+                            const main = task.survivalRoles[0];
+                            groupSurvivalRoles.set(main, (groupSurvivalRoles.get(main) || 0) + 1);
+                        }
+                        if (task.walkRoles && task.walkRoles.length > 0) {
+                            const main = task.walkRoles[0];
+                            groupWalkRoles.set(main, (groupWalkRoles.get(main) || 0) + 1);
+                        }
+                        if (task.dashRoles && task.dashRoles.length > 0) {
+                            const main = task.dashRoles[0];
+                            groupDashRoles.set(main, (groupDashRoles.get(main) || 0) + 1);
+                        }
+                    });
+                    const sortedSurvival = Array.from(groupSurvivalRoles.entries()).sort((a, b) => b[1] - a[1]);
+                    group.survivalRoles = sortedSurvival.length > 0 ? [sortedSurvival[0][0]] : [];
+                    const sortedWalk = Array.from(groupWalkRoles.entries()).sort((a, b) => b[1] - a[1]);
+                    group.walkRoles = sortedWalk.length > 0 ? [sortedWalk[0][0]] : [];
+                    const sortedDash = Array.from(groupDashRoles.entries()).sort((a, b) => b[1] - a[1]);
+                    group.dashRoles = sortedDash.length > 0 ? [sortedDash[0][0]] : [];
+                }
+
                 // 解析配置组
                 let match = line.match(/配置组 "(.+?)" 加载完成/);
                 if (match) {
                     const groupName = match[1];
-                    let group = parsingContext.activeGroups.get(groupName) || {
+                    // 强制结束当前活跃的配置组（无论名称是否相同）
+                    const activeGroupsList = Array.from(parsingContext.activeGroups.values());
+                    if (activeGroupsList.length > 0) {
+                        // 通常只有一个活跃组，取最后一个（即当前正在运行的组）
+                        const currentActiveGroup = activeGroupsList[activeGroupsList.length - 1];
+                        finalizeGroup(currentActiveGroup, parseTime(prevLine, fileDate));
+                        parsingContext.allGroups.push(currentActiveGroup);
+                        parsingContext.activeGroups.delete(currentActiveGroup.name);
+                    }
+
+                    // 创建新配置组
+                    let group = {
                         name: groupName,
                         startTime: parseTime(prevLine, fileDate),
                         endTime: null,
@@ -2973,18 +3023,18 @@
                         picks: new Map(),
                         lastActive: null,
                         teamRoles: new Set(),
-                        survivalRoles: [], // 生存位
-                        walkRoles: [],     // 行走位
-                        dashRoles: [],      // 赶路位
-                        hasRotationTargeting: false  // 旋转索敌标记
+                        survivalRoles: [],
+                        walkRoles: [],
+                        dashRoles: [],
+                        hasRotationTargeting: false
                     };
                     group.lastActive = parseTime(prevLine, fileDate);
                     parsingContext.activeGroups.set(groupName, group);
-                    battleCount = 0; // 重置战斗计数器
-                    lastCoordForRevive = null; // 重置坐标跟踪
-                    lastCoordForStuck = null;  // 重置坐标跟踪
 
-                    // 重置角色统计
+                    // 重置各种计数器
+                    battleCount = 0;
+                    lastCoordForRevive = null;
+                    lastCoordForStuck = null;
                     survivalWeights.clear();
                     walkWeights.clear();
                     lastSwitchedRole = null;
@@ -2992,7 +3042,6 @@
                     nahidaCollect = false;
                     kazuhaCollect = false;
 
-                    // 更新当前组
                     currentGroup = group;
                 }
 
@@ -3001,65 +3050,7 @@
                 if (match) {
                     const group = parsingContext.activeGroups.get(match[1]);
                     if (group) {
-                        group.endTime = parseTime(prevLine, fileDate);
-
-                        // 检查配置组是否只有跳过的任务
-                        let hasValidTasks = false;
-                        group.tasks.forEach(task => {
-                            // 检查任务是否有实际执行内容
-                            if (hasTaskActualContent(task)) {
-                                hasValidTasks = true;
-                            }
-                        });
-
-                        // 如果没有有效任务，标记为跳过
-                        if (!hasValidTasks) {
-                            group.skipped = true;
-                        } else {
-                            // 汇总配置组的角色信息
-                            const groupSurvivalRoles = new Map();
-                            const groupWalkRoles = new Map();
-                            const groupDashRoles = new Map(); // 赶路位汇总
-
-                            group.tasks.forEach(task => {
-                                // 汇总生存位 - 只取每个任务的主要生存位
-                                if (task.survivalRoles && task.survivalRoles.length > 0) {
-                                    const mainSurvivalRole = task.survivalRoles[0];
-                                    const count = groupSurvivalRoles.get(mainSurvivalRole) || 0;
-                                    groupSurvivalRoles.set(mainSurvivalRole, count + 1);
-                                }
-
-                                // 汇总行走位 - 只取每个任务的主要行走位
-                                if (task.walkRoles && task.walkRoles.length > 0) {
-                                    const mainWalkRole = task.walkRoles[0];
-                                    const count = groupWalkRoles.get(mainWalkRole) || 0;
-                                    groupWalkRoles.set(mainWalkRole, count + 1);
-                                }
-                                // 汇总赶路位 - 只取每个任务的主要赶路位
-                                if (task.dashRoles && task.dashRoles.length > 0) {
-                                    const mainDashRole = task.dashRoles[0];
-                                    const count = groupDashRoles.get(mainDashRole) || 0;
-                                    groupDashRoles.set(mainDashRole, count + 1);
-                                }
-                            });
-
-                            // 确定最终的配置组角色
-                            // 生存位：取出现次数最多的一个
-                            const sortedSurvival = Array.from(groupSurvivalRoles.entries())
-                                .sort((a, b) => b[1] - a[1]);
-                            group.survivalRoles = sortedSurvival.length > 0 ? [sortedSurvival[0][0]] : [];
-
-                            // 行走位：取出现次数最多的一个
-                            const sortedWalk = Array.from(groupWalkRoles.entries())
-                                .sort((a, b) => b[1] - a[1]);
-                            group.walkRoles = sortedWalk.length > 0 ? [sortedWalk[0][0]] : [];
-
-                            // 赶路位：取出现次数最多的一个
-                            const sortedDash = Array.from(groupDashRoles.entries())
-                                .sort((a, b) => b[1] - a[1]);
-                            group.dashRoles = sortedDash.length > 0 ? [sortedDash[0][0]] : [];
-                        }
-
+                        finalizeGroup(group, parseTime(prevLine, fileDate));
                         parsingContext.allGroups.push(group);
                         parsingContext.activeGroups.delete(match[1]);
 
@@ -3301,7 +3292,7 @@
                             currentTask.faults.too_far_skip++;
                         }
 
-                        if (line.includes("，重试多次后仍然失败，放弃此路径点！") ) {
+                        if (line.includes("，重试多次后仍然失败，放弃此路径点！")) {
                             const message = '路径识别失败，放弃部份路径';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
