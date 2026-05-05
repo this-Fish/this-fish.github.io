@@ -1,4 +1,4 @@
-<!--20260501-->
+<!--20260505-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3830,6 +3830,18 @@
                                 } else {
                                     currentTask.specialAlerts.set(message, { type: type, count: 1 });
                                 }
+                            }
+                        }
+
+                        // 34.切换角色卡住，执行脱困
+                        if (line.includes('切换角色卡住，执行脱困')) {
+                            const message = '切换角色卡住，执行脱困';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
 
