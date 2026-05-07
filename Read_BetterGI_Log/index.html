@@ -1,4 +1,4 @@
-<!--20260505-->
+<!--20260507-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3803,8 +3803,8 @@
                             }
                         }
 
-                        // 32. 游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！
-                        if (line.includes('游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！')) {
+                        // 32. 游戏窗口分辨率错误
+                        if (line.includes('游戏窗口分辨率小于 1920x1080 ！无法使用地图追踪功能！') || line.includes('执行脚本时发生异常: "游戏窗口分辨率不是 16:9"')) {
                             const message = '游戏窗口分辨率错误';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3895,7 +3895,7 @@
                         }
 
                         // 998. 用户取消，终止运行
-                        if (line.includes('用户取消，终止运行') || line.includes('取消自动任务')) {
+                        if (line.includes('用户取消，终止运行') || line.includes('取消自动任务') || line.includes('检测到您配置的停止快捷键"')) {
                             const message = '用户终止运行';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
