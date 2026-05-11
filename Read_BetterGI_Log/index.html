@@ -1,4 +1,4 @@
-<!--20260507-->
+<!--20260512-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3858,10 +3858,10 @@
                             }
                         }
 
-                        // 996. 进入剧情，自动点击剧情直到结束
-                        if (line.includes('进入剧情')) {
-                            const message = '进入剧情';
-                            const type = 'purple-alert';
+                        // 995. 执行超时，放弃此次追踪
+                        if (line.includes("执行超时，放弃此次追踪")) {
+                            const message = '路径点执行超时，放弃整条路径';
+                            const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
@@ -3870,10 +3870,10 @@
                             }
                         }
 
-                        // 995. 执行超时，放弃此次追踪
-                        if (line.includes("执行超时，放弃此次追踪")) {
-                            const message = '路径点执行超时，放弃整条路径';
-                            const type = 'abnormal-alert';
+                        // 996. 进入剧情，自动点击剧情直到结束
+                        if (line.includes('进入剧情')) {
+                            const message = '进入剧情';
+                            const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
@@ -3909,6 +3909,18 @@
                         // 999. 此追踪脚本未正常走完！
                         if (line.includes('此追踪脚本未正常走完！')) {
                             const message = '脚本未正常走完';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 1000. 游戏窗口大小发生变化
+                        if (line.includes('游戏窗口大小发生变化')) {
+                            const message = '游戏窗口大小发生变化';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
