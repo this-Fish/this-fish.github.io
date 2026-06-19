@@ -1,4 +1,4 @@
-<!--20260612-->
+<!--20260619-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3850,6 +3850,18 @@
                         // 34.切换角色卡住，执行脱困
                         if (line.includes('切换角色卡住，执行脱困')) {
                             const message = '切换角色卡住，执行脱困';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 35.处于限制时间内
+                        if (line.includes('处于限制时间内')) {
+                            const message = '处于限制时间内';
                             const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
