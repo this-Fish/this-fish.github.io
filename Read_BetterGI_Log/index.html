@@ -1,4 +1,4 @@
-<!--20260623-->
+<!--20260707-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3264,7 +3264,7 @@
                         }
 
                         if (line.includes("当前角色血量过低")) currentTask.faults.revive = currentTask.faults.revive - 0.9;
-                        if (line.match(/传送失败，重试 (\d+) 次/))
+                        if (line.match(/传送失败，重试 (\d+) 次/) || line.includes("多次尝试未移动到目标传送点，传送失败"))
                             currentTask.faults.teleport = parseInt(RegExp.$1);
                         // if (line.includes("重试一次路线")) currentTask.faults.retry++;
                         if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
@@ -3558,7 +3558,7 @@
                         }
 
                         // 13. 选项列表不存在传送点  重试
-                        if (line.includes("选项列表不存在传送点  重试") || line.includes("传送点未激活或不存在  重试")) {
+                        if (line.includes("选项列表不存在传送点  重试") || line.includes("传送点未激活或不存在  重试") || line.match(/选项列表不存在传送点/)) {
                             const message = '传送点不存在';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
