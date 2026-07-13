@@ -1,4 +1,4 @@
-<!--20260707-->
+<!--20260713-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -2881,10 +2881,15 @@
                 }
 
                 // 检测赶路位指令
-                if (line.includes('自动赶路："') && line.includes('赶路')) {
-                    const dashMatch = line.match(/自动赶路："(.+?)" 赶路/);
+                // if (line.includes('自动赶路："') && line.includes('赶路')) {
+                //     const dashMatch = line.match(/自动赶路："(.+?)" 赶路/);
+                // 检测赶路位指令（同时适配有无双引号，以及 “赶路” 或 “接近”）
+                if (line.includes('自动赶路：') && (line.includes('赶路') || line.includes('接近'))) {
+                    // 正则解析：匹配“自动赶路：”后面，且在“赶路”或“接近”之前的角色名字（支持可选的双引号）
+                    const dashMatch = line.match(/自动赶路："?(.+?)"?(赶路|接近).*/);
                     if (dashMatch && currentGroup && currentTask) {
-                        const dashRoleName = dashMatch[1];
+                        // 直接剔除所有的双引号
+                        const dashRoleName = dashMatch[1].replace(/"/g, '').trim();
 
                         // 记录最近的赶路角色，用于排除行走位权重
                         currentTask.recentDashRole = dashRoleName;
