@@ -1,4 +1,4 @@
-<!--20260713-->
+<!--20260716-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3409,6 +3409,21 @@
                             const match = line.match(/执行地图追踪时候发生错误: "战斗策略脚本中出现未知的方法：(.+?)"/);
                             if (match) {
                                 const message = `地图追踪战斗策略错误："${match[1]}"`;
+                                const type = 'strategy-error';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+                        }
+
+                        // 5.1 战斗策略错误-角色名称校验失败(地图追踪策略脚本错误)
+                        if (line.includes('执行地图追踪时候发生错误: "角色名称校验失败：')) {
+                            const match = line.match(/执行地图追踪时候发生错误: "角色名称校验失败：(.+?)"/);
+                            if (match) {
+                                const message = `地图追踪策略脚本错误："${match[1]}"`;
                                 const type = 'strategy-error';
                                 if (currentTask.specialAlerts.has(message)) {
                                     const existing = currentTask.specialAlerts.get(message);
