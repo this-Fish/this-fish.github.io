@@ -1,4 +1,4 @@
-<!--20260725-->
+<!--20260726-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3906,6 +3906,18 @@
                         if (line.includes('处于限制时间内')) {
                             const message = '处于限制时间内';
                             const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 36.进入钓鱼模式失败
+                        if (line.includes('进入钓鱼模式失败')) {
+                            const message = '进入钓鱼模式失败';
+                            const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
