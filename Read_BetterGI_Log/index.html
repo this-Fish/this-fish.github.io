@@ -1303,6 +1303,9 @@
         let timeFilterStart = null;   // 筛选开始时间
         let timeFilterEnd = null;     // 筛选结束时间
 
+        // 特殊事件关键字（用于 J 键隐藏零统计时保留）
+        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理'];
+
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
             return new Promise((resolve) => {
@@ -1863,7 +1866,19 @@
                                             (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
                                             (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
 
-                                        matchesStats = !isAllZero;
+                                        // 如果全零，检查特殊事件
+                                        let hasSpecialEvent = false;
+                                        if (isAllZero) {
+                                            let picksText = '';
+                                            // 新版格式：拾取物列在当前行
+                                            const picksCell = row.querySelector('.column-picks');
+                                            if (picksCell) picksText = picksCell.textContent.trim();
+                                            if (SPECIAL_EVENT_KEYWORDS.some(keyword => picksText.includes(keyword))) {
+                                                hasSpecialEvent = true;
+                                            }
+                                        }
+                                        // 最终：全零且无特殊事件 -> matchesStats = false；否则 true
+                                        matchesStats = !(isAllZero && !hasSpecialEvent);
                                     }
                                 }
 
@@ -1911,7 +1926,25 @@
                                             (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
                                             (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
 
-                                        matchesStats = !isAllZero;
+                                        // 如果全零，检查特殊事件
+                                        let hasSpecialEvent = false;
+                                        if (isAllZero) {
+                                            let picksText = '';
+                                            // 旧版格式：拾取物在子行
+                                            const taskId = row.getAttribute('data-task-id');
+                                            if (taskId) {
+                                                const subRow = table.querySelector(`tr[data-task-id="${taskId}"].sub-row`);
+                                                if (subRow) {
+                                                    const picksCell = subRow.querySelector('.column-picks');
+                                                    if (picksCell) picksText = picksCell.textContent.trim();
+                                                }
+                                            }
+                                            if (SPECIAL_EVENT_KEYWORDS.some(keyword => picksText.includes(keyword))) {
+                                                hasSpecialEvent = true;
+                                            }
+                                        }
+                                        // 最终：全零且无特殊事件 -> matchesStats = false；否则 true
+                                        matchesStats = !(isAllZero && !hasSpecialEvent);
                                     }
                                 }
 
@@ -6533,29 +6566,6 @@
             }, 50);
         }
 
-        // 辅助函数：检查行是否有非零统计
-        function hasNonZeroStats(row) {
-            const reviveCell = row.querySelector('.column-revive');
-            const retryCell = row.querySelector('.column-retry');
-            const retryDetailCell = row.querySelector('.column-retry-detail');
-            const tooFarSkipCell = row.querySelector('.column-too-far-skip');
-            const timeoutCell = row.querySelector('.column-timeout');
-            const teleportCell = row.querySelector('.column-teleport');
-
-            if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
-                const isAllZero =
-                    (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
-                    (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
-                    (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
-                    (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
-                    (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
-                    (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
-
-                return !isAllZero;
-            }
-            return true; // 如果找不到统计单元格，默认显示该行
-        }
-
         // 辅助函数: 检查行是否全零统计
         function isRowAllZeroStats(row) {
             const reviveCell = row.querySelector('.column-revive');
@@ -6566,14 +6576,45 @@
             const teleportCell = row.querySelector('.column-teleport');
 
             if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
-                return (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
+                // 1. 检查统计列是否全零
+                const isAllZero =
+                    (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
                     (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
                     (retryDetailCell.textContent.trim() === '' || retryDetailCell.textContent.trim() === '0') &&
                     (tooFarSkipCell.textContent.trim() === '' || tooFarSkipCell.textContent.trim() === '0') &&
                     (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
                     (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
+
+                // 如果不是全零，直接返回 false（非全零，不隐藏）
+                if (!isAllZero) return false;
+
+                // 2. 全零时，检查是否有特殊事件
+                let picksText = '';
+                const table = row.closest('table');
+                if (table) {
+                    if (!useLegacyFormat) {
+                        // 新版：拾取物列在当前行
+                        const picksCell = row.querySelector('.column-picks');
+                        if (picksCell) picksText = picksCell.textContent.trim();
+                    } else {
+                        // 旧版：拾取物在子行
+                        const taskId = row.getAttribute('data-task-id');
+                        if (taskId) {
+                            const subRow = table.querySelector(`tr[data-task-id="${taskId}"].sub-row`);
+                            if (subRow) {
+                                const picksCell = subRow.querySelector('.column-picks');
+                                if (picksCell) picksText = picksCell.textContent.trim();
+                            }
+                        }
+                    }
+                }
+                // 如果包含任一特殊关键字，返回 false（不隐藏）
+                if (SPECIAL_EVENT_KEYWORDS.some(keyword => picksText.includes(keyword))) {
+                    return false;
+                }
+                return true; // 全零且无特殊事件，应隐藏
             }
-            return false;
+            return false; // 统计单元格不完整，默认不隐藏
         }
 
         // 辅助函数: 检查任务是否在时间范围内
@@ -6854,6 +6895,7 @@
                     const teleportCell = row.querySelector('.column-teleport');
 
                     if (reviveCell && retryCell && retryDetailCell && tooFarSkipCell && timeoutCell && teleportCell) {
+                        // 1. 计算统计列是否全零
                         const isAllZero =
                             (reviveCell.textContent.trim() === '' || reviveCell.textContent.trim() === '0') &&
                             (retryCell.textContent.trim() === '' || retryCell.textContent.trim() === '0') &&
@@ -6862,10 +6904,37 @@
                             (timeoutCell.textContent.trim() === '' || timeoutCell.textContent.trim() === '0') &&
                             (teleportCell.textContent.trim() === '' || teleportCell.textContent.trim() === '0');
 
+                        // 2. 如果全零，检查是否有特殊事件
+                        let hasSpecialEvent = false;
                         if (isAllZero) {
-                            row.style.display = hideZeroStatsTasks ? 'none' : '';
+                            let picksText = '';
+                            if (!useLegacyFormat) {
+                                // 新版：拾取物列在当前行
+                                const picksCell = row.querySelector('.column-picks');
+                                if (picksCell) picksText = picksCell.textContent.trim();
+                            } else {
+                                // 旧版：拾取物在子行（通过 data-task-id 关联）
+                                const taskId = row.getAttribute('data-task-id');
+                                if (taskId) {
+                                    const subRow = table.querySelector(`tr[data-task-id="${taskId}"].sub-row`);
+                                    if (subRow) {
+                                        const picksCell = subRow.querySelector('.column-picks');
+                                        if (picksCell) picksText = picksCell.textContent.trim();
+                                    }
+                                }
+                            }
+                            // 检查是否包含任一特殊关键字（全局变量）
+                            if (SPECIAL_EVENT_KEYWORDS.some(keyword => picksText.includes(keyword))) {
+                                hasSpecialEvent = true;
+                            }
+                        }
 
-                            // 对于旧版格式，处理关联行
+                        // 3. 最终判定：全零且无特殊事件时才可能隐藏
+                        const shouldHide = isAllZero && !hasSpecialEvent;
+                        if (shouldHide) {
+                            // 如果启用隐藏零统计，则隐藏；否则显示
+                            row.style.display = hideZeroStatsTasks ? 'none' : '';
+                            // 旧版格式：关联行（子行）同步处理
                             if (useLegacyFormat) {
                                 const taskId = row.getAttribute('data-task-id');
                                 if (taskId) {
@@ -6876,10 +6945,9 @@
                                 }
                             }
                         } else {
+                            // 非全零 或 有特殊事件 → 始终显示
                             hasVisibleTask = true;
                             row.style.display = '';
-
-                            // 对于旧版格式，确保关联行显示
                             if (useLegacyFormat) {
                                 const taskId = row.getAttribute('data-task-id');
                                 if (taskId) {
