@@ -1,4 +1,4 @@
-<!--20260729-->
+<!--20260730-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1304,7 +1304,7 @@
         let timeFilterEnd = null;     // 筛选结束时间
 
         // 特殊事件关键字（用于 J 键隐藏零统计时保留）
-        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理'];
+        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理','终点坐标异常，不记录'];
 
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
@@ -3831,7 +3831,7 @@
                         ) {
                             const message = '终点坐标异常，不记录';
                             const type = 'abnormal-alert';
-                            currentTask.faults.too_far_skip++;
+                            // currentTask.faults.too_far_skip++;
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
@@ -3938,6 +3938,20 @@
                         // 35.处于限制时间内
                         if (line.includes('处于限制时间内')) {
                             const message = '处于限制时间内';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 35.5 接近限制时间，等待X分钟
+                        const waitMatch = line.match(/接近限制时间，等待 (\d+) 分钟/);
+                        if (waitMatch) {
+                            const waitMin = waitMatch[1];
+                            const message = `接近限制时间，等待 ${waitMin} 分钟`;
                             const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
