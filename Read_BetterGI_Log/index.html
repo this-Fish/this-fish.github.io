@@ -1,4 +1,4 @@
-<!--20260730-->
+<!--20260801-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1304,7 +1304,7 @@
         let timeFilterEnd = null;     // 筛选结束时间
 
         // 特殊事件关键字（用于 J 键隐藏零统计时保留）
-        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理','终点坐标异常，不记录'];
+        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理', '终点坐标异常，不记录'];
 
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
@@ -3965,6 +3965,18 @@
                         if (line.includes('进入钓鱼模式失败')) {
                             const message = '进入钓鱼模式失败';
                             const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 37. 检测到复苏按钮，点击 or 复苏完成
+                        if (line.includes('检测到复苏按钮，点击') || line.includes('复苏完成')) {
+                            const message = '全队死亡，复苏';
+                            const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
                                 existing.count++;
