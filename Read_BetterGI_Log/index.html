@@ -1,4 +1,4 @@
-<!--20260801-->
+<!--20260808-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3302,8 +3302,12 @@
                         }
 
                         if (line.includes("当前角色血量过低")) currentTask.faults.revive = currentTask.faults.revive - 0.9;
-                        if (line.match(/传送失败，重试 (\d+) 次/) || line.includes("多次尝试未移动到目标传送点，传送失败"))
+                        if (line.match(/传送失败，重试 (\d+) 次/)) {
                             currentTask.faults.teleport = parseInt(RegExp.$1);
+                        } else if (line.includes("多次尝试未移动到目标传送点，传送失败") || line.includes("目标传送点未移动到可点击区域，传送失败") ||line.includes("等待传送点交互面板超时  重试")) {
+                            // 没有具体重试次数，每次+1
+                            currentTask.faults.teleport++;
+                        }
                         // if (line.includes("重试一次路线")) currentTask.faults.retry++;
                         // if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
                         if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) {
@@ -3610,7 +3614,7 @@
                         }
 
                         // 12. 打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！
-                        if (line.includes("打开大地图失败，重试 3 次")) {
+                        if (line.includes("打开大地图失败，重试 3 次") || line.includes("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！") ) {
                             const message = '打开地图失败';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3634,7 +3638,7 @@
                         }
 
                         // 13.5 执行地图追踪时候发生错误: "传送失败"
-                        if (line.includes("执行地图追踪时候发生错误: \"传送失败\"")) {
+                        if (line.includes("执行地图追踪时候发生错误: \"传送失败\"") || line.includes("执行脚本时发生异常: \"传送失败\"")) {
                             const message = '传送失败，跳过路径';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
@@ -3644,6 +3648,19 @@
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
                             }
                         }
+
+                        // 13.6 传送等待超时，换台电脑吧
+                        if (line.includes("传送等待超时，换台电脑吧")) {
+                            const message = '传送等待超时';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+                        
 
                         // 14. 选项列表不存在传送点  重试
                         if (line.includes("识别大地图位置失败")) {
