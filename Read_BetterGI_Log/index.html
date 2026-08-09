@@ -4053,7 +4053,8 @@
                         }
 
                         // 998. 用户取消，终止运行
-                        if (line.includes('用户取消，终止运行') || line.includes('取消自动任务') || line.includes('检测到您配置的停止快捷键"')) {
+                        // if (line.includes('用户取消，终止运行') || line.includes('取消自动任务') || line.includes('检测到您配置的停止快捷键"')) {
+                        if (line.includes('用户取消，终止运行') || line.includes('检测到您配置的停止快捷键"')) {
                             const message = '用户终止运行';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
