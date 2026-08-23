@@ -1,4 +1,4 @@
-<!--20260808-->
+<!--20260824-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3638,7 +3638,7 @@
                         }
 
                         // 13.5 执行地图追踪时候发生错误: "传送失败"
-                        if (line.includes("执行地图追踪时候发生错误: \"传送失败\"") || line.includes("执行脚本时发生异常: \"传送失败\"") || line.includes("执行脚本时发生异常: \"单次传送超过")) {
+                        if (line.includes("执行地图追踪时候发生错误: \"传送失败\"") || line.includes("执行脚本时发生异常: \"传送失败\"") || line.includes("执行脚本时发生异常: \"单次传送超过") ||  line.includes("执行地图追踪时候发生错误: \"单次传送超过")) {
                             const message = '传送失败，跳过路径';
                             const type = 'abnormal-alert';
                             currentTask.faults.teleport++;
