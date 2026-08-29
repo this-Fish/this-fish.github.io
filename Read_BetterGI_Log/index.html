@@ -1,4 +1,4 @@
-<!--20260824-->
+<!--20260829-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3064,7 +3064,8 @@
                         survivalRoles: [],
                         walkRoles: [],
                         dashRoles: [],
-                        hasRotationTargeting: false
+                        hasRotationTargeting: false,
+                        hasBeamPickup: false,
                     };
                     group.lastActive = parseTime(prevLine, fileDate);
                     parsingContext.activeGroups.set(groupName, group);
@@ -3118,6 +3119,13 @@
                     // 檢測旋轉索敵
                     if (line.includes('敌人位置: (') && line.includes('血量高度:')) {
                         currentGroup.hasRotationTargeting = true;
+                    }
+
+                    // 检测战后光柱拾取
+                    if (line.includes('超时或视野内没有可拾取物品，结束扫描')) {
+                        if (currentGroup) {
+                            currentGroup.hasBeamPickup = true;
+                        }
                     }
 
                     // 检测自动战斗开始
@@ -3310,10 +3318,11 @@
                         }
                         // if (line.includes("重试一次路线")) currentTask.faults.retry++;
                         // if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
-                        if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) {
+                        // if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) {
+                        if (line.includes("此路线出现3次卡死，重试一次路线或放弃此路线！")) {
                             currentTask.faults.retry++;
                             // 当重试次数超过2时，添加异常消息
-                            if (currentTask && currentTask.faults.retry >= 2) {
+                            if (currentTask && currentTask.faults.retry > 2) {
                                 const message = '路线多次卡死，放弃此路线！';
                                 const type = 'abnormal-alert';
                                 if (!currentTask.specialAlerts.has(message)) {
@@ -3626,8 +3635,9 @@
                         }
 
                         // 13. 选项列表不存在传送点  重试
-                        if (line.includes("选项列表不存在传送点  重试") || line.includes("传送点未激活或不存在  重试") || line.match(/选项列表不存在传送点/)) {
-                            const message = '传送点不存在';
+                        if (line.includes("选项列表不存在传送点  重试") || line.includes("传送点未激活或不存在  重试") || line.match(/选项列表不存在传送点/) || line.match(/执行脚本时发生异常: "点击传送点后未出现交互面板，可能是传送点未激活"/)) {
+                            currentTask.faults.teleport++;
+                            const message = '传送点不存在或未激活';
                             const type = 'abnormal-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
@@ -3638,7 +3648,10 @@
                         }
 
                         // 13.5 执行地图追踪时候发生错误: "传送失败"
-                        if (line.includes("执行地图追踪时候发生错误: \"传送失败\"") || line.includes("执行脚本时发生异常: \"传送失败\"") || line.includes("执行脚本时发生异常: \"单次传送超过") ||  line.includes("执行地图追踪时候发生错误: \"单次传送超过")) {
+                        if (line.includes("执行地图追踪时候发生错误: \"传送失败\"") ||
+                            line.includes("执行脚本时发生异常: \"传送失败\"") ||
+                            line.includes("执行脚本时发生异常: \"单次传送超过") ||
+                            line.includes("执行地图追踪时候发生错误: \"单次传送超过")) {
                             const message = '传送失败，跳过路径';
                             const type = 'abnormal-alert';
                             currentTask.faults.teleport++;
@@ -4435,6 +4448,11 @@
                             displayText += ` (旋转索敌)`;
                         }
 
+                        // 光柱拾取
+                        if (group.hasBeamPickup) {
+                            displayText += ` (光柱拾取)`;
+                        }
+
                         return `<div class="team-role-line">${displayText}</div>`;
                     }).join('')}
                                 </div>
@@ -4745,6 +4763,11 @@
                         // 旋轉索敵
                         if (group.hasRotationTargeting) {
                             displayText += ` (旋转索敌)`;
+                        }
+
+                        // 光柱拾取
+                        if (group.hasBeamPickup) {
+                            displayText += ` (光柱拾取)`;
                         }
 
                         return `<div class="team-role-line">${displayText}</div>`;
