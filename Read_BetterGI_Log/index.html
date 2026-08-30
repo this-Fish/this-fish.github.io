@@ -1,4 +1,4 @@
-<!--20260830-->
+<!--20260830_2->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3862,7 +3862,8 @@
                             (line.includes('出现异常') && line.includes('不记录cd')) ||
                             line.includes('坐标获取失败，不更新记录') || // CD-Aware-AutoGather2.0前日志
                             line.includes('出发点与终点过于接近，不记录运行数据') ||
-                            line.includes('位置几乎未变化，不更新刷新时间')
+                            line.includes('位置几乎未变化，不更新刷新时间')||
+                            line.includes('路线运行失败：') // 采集cd管理3.1.0/鋤地2.12.0 起 莫醬版BGI路線失敗
                         ) {
                             const message = '终点坐标异常，不记录';
                             const type = 'abnormal-alert';
@@ -4011,6 +4012,18 @@
                         // 37. 检测到复苏按钮，点击 or 复苏完成
                         if (line.includes('检测到复苏按钮，点击') || line.includes('复苏完成')) {
                             const message = '全队死亡，复苏';
+                            const type = 'purple-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 38.已达到总运行限时(采集CD管理3.1.0)
+                        if (line.includes('已达到总运行限时 ')) {
+                            const message = '已达到总运行限时，结束脚本';
                             const type = 'purple-alert';
                             if (currentTask.specialAlerts.has(message)) {
                                 const existing = currentTask.specialAlerts.get(message);
