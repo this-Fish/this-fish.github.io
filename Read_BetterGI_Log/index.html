@@ -1,4 +1,4 @@
-<!--20260830-2-->
+<!--20260903-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -4030,6 +4030,22 @@
                                 existing.count++;
                             } else {
                                 currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
+                        // 39.检测路线文件格式错误(鋤地一條龍2.13.0)
+                        const routeErrorMatch = line.match(/(读取或解析路线文件失败|路线文件结构无效|路线文件标签格式无效)，跳过 (.+?)：/);
+                        if (routeErrorMatch) {
+                            const path = routeErrorMatch[2];  // 提取路径
+                            const message = `路线文件格式有誤：${path}`;
+                            const type = 'abnormal-alert';
+                            if (currentTask) {
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
                             }
                         }
 
