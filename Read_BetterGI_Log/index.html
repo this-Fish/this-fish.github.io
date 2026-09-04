@@ -1,4 +1,4 @@
-<!--20260903-->
+<!--20260904-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3862,7 +3862,7 @@
                             (line.includes('出现异常') && line.includes('不记录cd')) ||
                             line.includes('坐标获取失败，不更新记录') || // CD-Aware-AutoGather2.0前日志
                             line.includes('出发点与终点过于接近，不记录运行数据') ||
-                            line.includes('位置几乎未变化，不更新刷新时间')||
+                            line.includes('位置几乎未变化，不更新刷新时间') ||
                             line.includes('路线运行失败：') // 采集cd管理3.1.0/鋤地2.12.0 起 莫醬版BGI路線失敗
                         ) {
                             const message = '终点坐标异常，不记录';
@@ -6256,7 +6256,8 @@
             if (input == "/3") { input = "小怪" }
             if (input == "/4") { input = "使用回血料理,使用复活料理" }
 
-            const itemsToCount = input.split(',')
+            // 支持英文逗号、中文逗号、顿号、空格作为分隔符
+            const itemsToCount = input.split(/[，,、\s]+/)
                 .map(item => item.trim())
                 .filter(item => item.length > 0);
 
