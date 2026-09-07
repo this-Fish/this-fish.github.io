@@ -4061,6 +4061,18 @@
                             }
                         }
 
+                        // 41.执行脚本时发生异常: "Index was outside the bounds of the array."
+                        if (line.includes('执行脚本时发生异常: "Index was outside the bounds of the array."')) {
+                            const message = '资源缺失，请重新安装BGI?';
+                            const type = 'abnormal-alert';
+                            if (currentTask.specialAlerts.has(message)) {
+                                const existing = currentTask.specialAlerts.get(message);
+                                existing.count++;
+                            } else {
+                                currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                            }
+                        }
+
                         // LCB版
                         // 900. 网络恢复中...
                         if (line.includes('网络恢复中...')) {
