@@ -1,4 +1,4 @@
-<!--20260909-->
+<!--20260912-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -4079,13 +4079,41 @@
 
                             // 41.执行脚本时发生异常: "Index was outside the bounds of the array."
                             if (line.includes('执行脚本时发生异常: "Index was outside the bounds of the array."')) {
-                                const message = '资源缺失，请重新安装BGI?';
+                                const message = '资源缺失，请重新安装BGI';
                                 const type = 'abnormal-alert';
                                 if (currentTask.specialAlerts.has(message)) {
                                     const existing = currentTask.specialAlerts.get(message);
                                     existing.count++;
                                 } else {
                                     currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+
+                            // 42.执行地图追踪时候发生错误: "不存在的角色编号"
+                            if (line.includes('执行地图追踪时候发生错误: "不存在的角色编号"')) {
+                                const message = '切换角色参数设定错误';
+                                const type = 'abnormal-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+
+                            // 43.加入黑名单(鋤地一條龍)
+                            if (line.includes('加入黑名单：')) {
+                                const match = line.match(/加入黑名单：(.+)/);
+                                if (match) {
+                                    const itemName = match[1].trim();
+                                    const message = `加入黑名单："${itemName}" `;
+                                    const type = 'purple-alert';
+                                    if (currentTask.specialAlerts.has(message)) {
+                                        const existing = currentTask.specialAlerts.get(message);
+                                        existing.count++;
+                                    } else {
+                                        currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                    }
                                 }
                             }
 
