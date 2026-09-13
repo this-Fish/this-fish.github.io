@@ -3334,8 +3334,8 @@
                             }
                             // if (line.includes("重试一次路线")) currentTask.faults.retry++;
                             // if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) currentTask.faults.retry++;
-                            // if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) {
-                            if (line.includes("此路线出现3次卡死，重试一次路线或放弃此路线！")) {
+                            if (line.includes("记录恢复点位，地图追踪将到达上次点位之前将跳过走路之外的操作")) {
+                            // if (line.includes("此路线出现3次卡死，重试一次路线或放弃此路线！")) {
                                 currentTask.faults.retry++;
                                 // 当重试次数超过2时，添加异常消息
                                 if (currentTask && currentTask.faults.retry > 2) {
@@ -4078,7 +4078,8 @@
                             }
 
                             // 41.执行脚本时发生异常: "Index was outside the bounds of the array."
-                            if (line.includes('执行脚本时发生异常: "Index was outside the bounds of the array."')) {
+                            if (line.includes('执行脚本时发生异常: "Index was outside the bounds of the array."') ||
+                                line.includes('执行地图追踪时候发生错误: "Index was outside the bounds of the array."')) {
                                 const message = '资源缺失，请重新安装BGI';
                                 const type = 'abnormal-alert';
                                 if (currentTask.specialAlerts.has(message)) {
