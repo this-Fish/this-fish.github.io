@@ -1,4 +1,4 @@
-<!--20260914-->
+<!--20260915-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1304,7 +1304,7 @@
         let timeFilterEnd = null;     // 筛选结束时间
 
         // 特殊事件关键字（用于 J 键隐藏零统计时保留）
-        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理', '终点坐标异常，不记录',"资源缺失，请重新安装BGI"];
+        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理', '终点坐标异常，不记录', "资源缺失，请重新安装BGI"];
 
         // 黑名單关键字
         const BLACKLIST_KEYWORDS = [
@@ -3774,12 +3774,22 @@
                                 }
                             }
 
-                            // 19. 简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：".*"
+                            // 19. 简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个：""
                             if (line.includes('简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个："')) {
-                                const match = line.match(/简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个："(.+?)"/);
+                                const match = line.match(/简易策略脚本要求的角色不存在！队伍中需要存在下面角色中的一个或多个："(.*?)"/);
                                 if (match) {
-                                    const message = `缺少脚本指定角色："${match[1]}"`;
-                                    const type = 'purple-alert';
+                                    const roleContent = match[1].trim();
+                                    let message, type;
+
+                                    if (roleContent === '') {
+                                        // 中间为空的情况
+                                        message = '简易策略脚本空缺';
+                                        type = 'purple-alert';
+                                    } else {
+                                        message = `缺少脚本指定角色："${roleContent}"`;
+                                        type = 'purple-alert';
+                                    }
+
                                     if (currentTask.specialAlerts.has(message)) {
                                         const existing = currentTask.specialAlerts.get(message);
                                         existing.count++;
