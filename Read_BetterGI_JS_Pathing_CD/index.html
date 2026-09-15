@@ -1,0 +1,1700 @@
+<!-- 20260916 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神采集路线 CD 监控</title>
+    <style>
+        /* ===== 全局重置 & 黑白灰主题 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+            position: relative;
+        }
+
+        body.dark-mode {
+            background: #121212;
+            color: #e0e0e0;
+        }
+
+        /* ===== 主题提示 ===== */
+        #theme-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 998;
+            backdrop-filter: blur(4px);
+        }
+
+        body.dark-mode #theme-indicator {
+            background: #fff;
+            color: #000;
+        }
+
+        #theme-indicator.show {
+            opacity: 1;
+        }
+
+        /* ===== 启动提示 ===== */
+        #hint-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 999;
+            backdrop-filter: blur(4px);
+        }
+
+        body.dark-mode #hint-indicator {
+            background: #fff;
+            color: #000;
+        }
+
+        #hint-indicator.show {
+            opacity: 1;
+        }
+
+        /* ===== 拖拽上传首屏 ===== */
+        #dropzone {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 1px;
+            color: #4a5568;
+            background: #f8f9fa;
+            border: 4px dashed #d1d5db;
+            margin: 20px;
+            border-radius: 32px;
+            z-index: 10;
+            transition: opacity 0.4s, background 0.3s, border-color 0.3s;
+            cursor: default;
+            text-align: center;
+            padding: 20px;
+        }
+
+        body.dark-mode #dropzone {
+            background: #121212;
+            color: #8f8f8f;
+            border-color: #444;
+        }
+
+        #dropzone.dragover {
+            border-color: #6c7a8a;
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        body.dark-mode #dropzone.dragover {
+            border-color: #aaa;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        #dropzone.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #dropzone .sub {
+            font-size: 18px;
+            margin-top: 12px;
+            opacity: 0.6;
+        }
+
+        #dropzone .sub strong {
+            color: #2c3e50;
+            text-decoration: underline;
+        }
+
+        body.dark-mode #dropzone .sub strong {
+            color: #ccc;
+        }
+
+        /* ===== 主容器 ===== */
+        #app {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 10px 0 40px;
+            display: none;
+        }
+
+        #app.visible {
+            display: block;
+        }
+
+        /* ===== 应用头部 ===== */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 0 6px 16px 6px;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 24px;
+        }
+
+        body.dark-mode .app-header {
+            border-bottom-color: #333;
+        }
+
+        .app-header .info {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .app-header .badge {
+            background: #e9ecef;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        body.dark-mode .app-header .badge {
+            background: #2a2a2a;
+            color: #ccc;
+        }
+
+        .app-header .reupload-hint {
+            font-size: 13px;
+            opacity: 0.8;
+            border: 1px solid #ccc;
+            padding: 4px 14px;
+            border-radius: 30px;
+            background: #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+
+        .app-header .reupload-hint:hover {
+            background: #e0e0e0;
+            opacity: 1;
+        }
+
+        body.dark-mode .app-header .reupload-hint {
+            border-color: #555;
+            background: #2a2a2a;
+            color: #aaa;
+        }
+
+        body.dark-mode .app-header .reupload-hint:hover {
+            background: #333;
+        }
+
+        /* ===== 用户组卡片（外层） ===== */
+        .user-card {
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+            transition: background 0.3s, border-color 0.3s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        body.dark-mode .user-card {
+            background: #1a1a1a;
+            border-color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-header {
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: background 0.15s;
+            gap: 8px 16px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        body.dark-mode .user-header {
+            background: #252525;
+            border-bottom-color: #333;
+        }
+
+        .user-header:hover {
+            background: #f1f3f5;
+        }
+
+        body.dark-mode .user-header:hover {
+            background: #2a2a2a;
+        }
+
+        .user-name-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-toggle-icon {
+            font-size: 18px;
+            transition: transform 0.25s;
+            display: inline-block;
+            width: 24px;
+            text-align: center;
+            color: #888;
+        }
+
+        .user-card.expanded .user-toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        .user-name {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .user-count {
+            font-size: 13px;
+            opacity: 0.6;
+            font-weight: 400;
+        }
+
+        .user-body {
+            padding: 12px 16px 16px 16px;
+            display: none;
+        }
+
+        .user-card.expanded .user-body {
+            display: block;
+        }
+
+        /* ===== 物品组卡片（内层） ===== */
+        .group-card {
+            background: #ffffff;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        body.dark-mode .group-card {
+            background: #1e1e1e;
+            border-color: #333;
+        }
+
+        .group-header {
+            padding: 12px 18px;
+            cursor: pointer;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: background 0.15s;
+            gap: 8px 16px;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        body.dark-mode .group-header {
+            background: #262626;
+            border-bottom-color: #333;
+        }
+
+        .group-header:hover {
+            background: #f1f3f5;
+        }
+
+        body.dark-mode .group-header:hover {
+            background: #2a2a2a;
+        }
+
+        .group-name-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .group-toggle-icon {
+            font-size: 16px;
+            transition: transform 0.25s;
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+            color: #888;
+        }
+
+        .group-card.expanded .group-toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        .group-name {
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .group-count {
+            font-size: 12px;
+            opacity: 0.6;
+            font-weight: 400;
+        }
+
+        .group-status-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .group-countdown {
+            font-size: 14px;
+            font-weight: 500;
+            color: #b91c1c;
+            background: rgba(185, 28, 28, 0.06);
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        body.dark-mode .group-countdown {
+            background: rgba(248, 113, 113, 0.08);
+            color: #f87171;
+        }
+
+        .group-next-time {
+            font-size: 14px;
+            font-weight: 500;
+            color: #b91c1c;
+            white-space: nowrap;
+        }
+
+        body.dark-mode .group-next-time {
+            color: #f87171;
+        }
+
+        .group-body {
+            padding: 0 18px 14px 18px;
+            display: none;
+        }
+
+        .group-card.expanded .group-body {
+            display: block;
+        }
+
+        /* ===== 单条路线 ===== */
+        .route-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 10px 0;
+            gap: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .route-item:last-child {
+            border-bottom: none;
+        }
+
+        body.dark-mode .route-item {
+            border-bottom-color: #2a2a2a;
+        }
+
+        .route-name {
+            flex: 1 1 200px;
+            font-size: 14px;
+            font-weight: 450;
+            opacity: 0.9;
+            word-break: break-word;
+            min-width: 120px;
+        }
+
+        .route-progress-wrap {
+            flex: 2 1 160px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 130px;
+        }
+
+        .route-progress-track {
+            flex: 1;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+            min-width: 40px;
+        }
+
+        body.dark-mode .route-progress-track {
+            background: #2d2d2d;
+        }
+
+        .route-progress-fill {
+            height: 100%;
+            background: #6c7a8a;
+            border-radius: 6px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        body.dark-mode .route-progress-fill {
+            background: #a0aec0;
+        }
+
+        .route-countdown {
+            font-size: 14px;
+            font-weight: 500;
+            color: #b91c1c;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        body.dark-mode .route-countdown {
+            color: #f87171;
+        }
+
+        .route-time {
+            font-size: 13px;
+            opacity: 0.6;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            min-width: 120px;
+            text-align: right;
+        }
+
+        /* ===== 空状态 ===== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            opacity: 0.5;
+            font-size: 16px;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            #dropzone {
+                font-size: 22px;
+                margin: 10px;
+                border-radius: 20px;
+            }
+
+            .user-header,
+            .group-header {
+                padding: 12px 16px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+
+            .group-status-area {
+                justify-content: flex-start;
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .user-body {
+                padding: 8px 12px 12px 12px;
+            }
+
+            .group-body {
+                padding: 0 12px 12px 12px;
+            }
+
+            .route-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+                padding: 10px 0;
+            }
+
+            .route-name {
+                flex: unset;
+                font-size: 13px;
+            }
+
+            .route-progress-wrap {
+                flex: unset;
+                gap: 10px;
+            }
+
+            .route-countdown {
+                text-align: left;
+                min-width: unset;
+                font-size: 14px;
+            }
+
+            .route-time {
+                text-align: left;
+                min-width: unset;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #dropzone {
+                font-size: 18px;
+                margin: 6px;
+                border-radius: 16px;
+            }
+
+            .user-header {
+                padding: 10px 12px;
+            }
+
+            .group-header {
+                padding: 10px 12px;
+            }
+
+            .route-progress-track {
+                height: 5px;
+            }
+        }
+
+        /* ===== 滚动条 ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 6px;
+        }
+
+        body.dark-mode ::-webkit-scrollbar-thumb {
+            background: #444;
+        }
+
+        /* ===== 加载遮罩 ===== */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        #loadingOverlay.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 16px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        body.dark-mode #loadingOverlay {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        /* 隐藏的 input */
+        #folderInput,
+        #fileInput {
+            display: none;
+        }
+
+        /* ===== 快捷键面板（参考待办事项样式） ===== */
+        .shortcut-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a2a30;
+            border: 1px solid #5a5a62;
+            border-radius: 16px;
+            padding: 24px 32px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            color: #f0f0f0;
+            font-size: 16px;
+            min-width: 300px;
+            max-width: 500px;
+            display: none;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .shortcut-panel.visible {
+            display: block;
+        }
+
+        .shortcut-panel h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #ddd;
+            border-bottom: 1px solid #5a5a62;
+            padding-bottom: 10px;
+        }
+
+        .shortcut-panel table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .shortcut-panel td {
+            padding: 8px 12px;
+        }
+
+        .shortcut-panel td:first-child {
+            font-weight: bold;
+            color: #ffd966;
+            white-space: nowrap;
+        }
+
+        .shortcut-panel td:last-child {
+            color: #ccc;
+        }
+
+        .shortcut-panel .close-hint {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            display: none;
+        }
+
+        .panel-overlay.visible {
+            display: block;
+        }
+
+        body.dark-mode .shortcut-panel {
+            background: #1e1e24;
+            border-color: #444;
+        }
+
+        body.dark-mode .shortcut-panel h3 {
+            border-bottom-color: #444;
+            color: #ddd;
+        }
+
+        body.dark-mode .shortcut-panel td:last-child {
+            color: #bbb;
+        }
+
+        .other-info {
+            margin-top: 16px;
+            border-top: 1px solid #5a5a62;
+            padding-top: 12px;
+        }
+
+        .other-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ddd;
+            padding: 4px 0;
+        }
+
+        .other-header:hover {
+            color: #fff;
+        }
+
+        .other-header .toggle-icon {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+
+        .other-header.collapsed .toggle-icon {
+            transform: rotate(0deg);
+        }
+
+        .other-header:not(.collapsed) .toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        .other-body {
+            padding: 8px 0 4px 12px;
+        }
+
+        .other-body.collapsed {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 主题提示 -->
+    <div id="theme-indicator"></div>
+
+    <!-- 启动提示 -->
+    <div id="hint-indicator">按 0 或 F1 键查看说明</div>
+
+    <!-- 加载遮罩 -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <span>正在读取文件...</span>
+    </div>
+
+    <!-- 隐藏的文件夹选择器（多账户） -->
+    <input type="file" id="folderInput" webkitdirectory multiple accept=".json">
+    <!-- 隐藏的单个文件选择器（单账户） -->
+    <input type="file" id="fileInput" accept=".json">
+
+    <!-- 拖拽上传首屏 -->
+    <div id="dropzone">
+        <div>拖拽 <strong>record.json</strong> 文件到此处即可</div>
+    </div>
+
+    <!-- 主应用 -->
+    <div id="app">
+        <div class="app-header">
+            <span class="info">⏳ 仅显示正在冷却中的路线</span>
+            <span class="badge" id="routeCount">0 条路线冷却中</span>
+            <span class="reupload-hint" id="reuploadBtn">📤 点击替换数据</span>
+        </div>
+        <div id="container"></div>
+    </div>
+
+    <!-- 快捷键面板 -->
+    <div class="panel-overlay" id="panelOverlay"></div>
+    <div class="shortcut-panel" id="shortcutPanel">
+        <h3>⌨️ 快捷鍵說明</h3>
+        <table>
+            <tr>
+                <td>F1</td>
+                <td><a href="#" id="f1Link" style="color:#ffd966;text-decoration:underline;">開啟說明連結</a></td>
+            </tr>
+            <tr>
+                <td>0</td>
+                <td>顯示/隱藏本面板</td>
+            </tr>
+            <tr>
+                <td>~</td>
+                <td>切換深色/淺色模式</td>
+            </tr>
+            <tr>
+                <td>Alt + F</td>
+                <td>切換全螢幕模式</td>
+            </tr>
+            <tr>
+                <td>[</td>
+                <td>啟用/關閉自由編輯</td>
+            </tr>
+            <tr>
+                <td>F2</td>
+                <td>選擇單個 record.json（單帳戶）</td>
+            </tr>
+            <tr>
+                <td>F3</td>
+                <td>選擇包含 record.json 的資料夾（多帳戶）</td>
+            </tr>
+        </table>
+        <div class="other-info" id="otherInfo">
+            <div class="other-header" id="otherToggle">
+                <span class="toggle-icon">▶</span>
+                <span>📌 其他說明</span>
+            </div>
+            <div class="other-body">
+                <p style="margin: 8px 0; color: #ccc; font-size: 14px;">
+                    將 cdTime 手動設為 <code
+                        style="background:#333;padding:2px 8px;border-radius:4px;color:#ffd966;">9970-01-01T08:00:00.000+08:00</code>，本網頁會無視該路線（不顯示）。
+                </p>
+            </div>
+        </div>
+        <div class="close-hint">再次按 0 或點擊遮罩關閉</div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            // F1 超链接地址
+            const F1_LINK = 'https://github.com/this-Fish/this-fish.github.io/tree/main/Read_BetterGI_JS_Pathing_CD';
+
+            // ===== DOM 引用 =====
+            const dropzone = document.getElementById('dropzone');
+            const app = document.getElementById('app');
+            const container = document.getElementById('container');
+            const routeCountBadge = document.getElementById('routeCount');
+            const themeIndicator = document.getElementById('theme-indicator');
+            const hintIndicator = document.getElementById('hint-indicator');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const folderInput = document.getElementById('folderInput');
+            const fileInput = document.getElementById('fileInput');
+            const reuploadBtn = document.getElementById('reuploadBtn');
+            const shortcutPanel = document.getElementById('shortcutPanel');
+            const panelOverlay = document.getElementById('panelOverlay');
+
+            // ===== 状态 =====
+            let userData = [];
+            let singleData = null;
+            let isMultiUser = false;
+            let expandedUsers = new Set();
+            let expandedItemsMap = new Map();
+            let timerInterval = null;
+            let hintTimer = null;
+
+            // ===== 物品→刷新周期（小时）映射 =====
+            const ITEM_CYCLE_MAP = {
+                '冷鲜肉': 12, '发光髓': 12, '蝴蝶翅膀': 12, '晶蝶': 12, '晶核': 12, '鳗肉': 12, '螃蟹': 12, '禽肉': 12, '青蛙': 12,
+                '鳅鳅宝玉': 12, '神秘的肉': 12, '兽肉': 12, '蜥蜴尾巴': 12, '鱼肉': 12,
+                '沉玉仙茗': 24, '风息花': 24, '白灵果': 24, '白萝卜': 24, '薄荷': 24, '澄晶实': 24, '墩墩桃': 24, '海草': 24,
+                '寒涌石': 24, '红果果菇': 24, '胡萝卜': 24, '金鱼草': 24, '堇瓜': 24, '烬芯花': 24, '久雨莲': 24, '颗粒果': 24,
+                '苦种': 24, '莲蓬': 24, '马尾': 24, '蘑菇': 24, '茉洁草': 24, '鸟蛋': 24, '树莓': 24, '松果': 24, '松茸': 24,
+                '宿影花': 24, '甜甜花': 24, '铁块': 24, '汐藻': 24, '夏槲果': 24, '香辛果': 24, '须弥蔷薇': 24, '枣椰': 24,
+                '竹笋': 24, '纳塔食材一条龙': 24, '提瓦特食材一条龙': 24, '瓦雷莎家的果园': 24, '泡泡桔': 24, '苹果': 24,
+                '日落果': 24, '星蕈': 24, '烛伞蘑菇': 24,
+                '红甜菜': 24, '冰星果': 24, '雪球花': 24, '冰醋栗': 24, '幽光萤石': 24,
+                '魔晶矿': 24, '垂钓点': 72,
+                '白铁块': 48, '电气水晶': 48, '星银矿石': 48,
+                '萃凝晶': 72, '虹滴晶': 72, '水晶块': 72, '紫晶块': 72, '莉奈娅一条龙': 72,
+                '便携轴承': 46, '冰雾花花朵': 46, '苍晶螺': 46, '赤念果': 46, '初露之源': 46, '悼灵花': 46, '冬凌草': 46,
+                '嘟嘟莲': 46, '绯樱绣球': 46, '风车菊': 46, '钩钩果': 46, '鬼兜虫': 46, '海灵芝': 46, '海露花': 46,
+                '虹彩蔷薇': 46, '湖光铃兰': 46, '劫波莲': 46, '晶化骨髓': 46, '绝云椒椒': 46, '空羽蛾': 46, '枯叶紫英': 46,
+                '浪沫羽鳃': 46, '烈焰花花蕊': 46, '琉璃百合': 46, '琉璃袋': 46, '琉鳞石': 46, '落落莓': 46, '鸣草': 46,
+                '慕风蘑菇': 46, '霓裳花': 46, '凝月泪滴': 46, '帕蒂沙兰': 46, '蒲公英籽': 46, '奇异的「牙齿」': 46,
+                '青蜜莓': 46, '清水玉': 46, '清心': 46, '柔灯铃': 46, '肉龙掌': 46, '塞西莉亚花': 46, '沙脂蛹': 46,
+                '珊瑚真珠': 46, '圣金虫': 46, '石珀': 46, '树王圣体菇': 46, '霜盏花': 46, '松珀香': 46, '天云草实': 46,
+                '万相石': 46, '微光角菌': 46, '小灯草': 46, '星螺': 46, '血斛': 46, '夜泊石': 46, '幽灯蕈': 46,
+                '幽光星星': 46, '月莲': 46, '月落银': 46, '云岩裂叶': 46, '灼灼彩菊': 46, '子探测单元': 46,
+                '霜仙花': 46, '植绒草': 46, '金蕨': 46,
+                '爱可菲': 168, '蒙德食材': 24, '璃月食材': 24, '稻妻食材': 24, '须弥食材': 24, '枫丹食材': 24,
+                '纳塔食材': 24, '挪德卡莱食材': 24, '至冬食材': 24,
+
+            };
+
+            // 默认改为 24 小时
+            function getItemCycle(name) { return ITEM_CYCLE_MAP[name] || 24; }
+
+            // ===== 工具函数 =====
+            function formatDate(ts) {
+                const d = new Date(ts);
+                const pad = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            }
+
+            function formatCountdown(ms) {
+                if (ms <= 0) return '已刷新';
+                const totalSec = Math.floor(ms / 1000);
+                const hours = Math.floor(totalSec / 3600);
+                const mins = Math.floor((totalSec % 3600) / 60);
+                const secs = totalSec % 60;
+                const pad = n => String(n).padStart(2, '0');
+                return `${hours}:${pad(mins)}:${pad(secs)}`;
+            }
+
+            function extractItemFromFileName(fileName) {
+                const base = fileName.replace(/\.json$/i, '');
+                const parts = base.split('-');
+                const sortedKeys = Object.keys(ITEM_CYCLE_MAP).sort((a, b) => b.length - a.length);
+                for (let part of parts) {
+                    for (let key of sortedKeys) {
+                        if (part.includes(key)) return key;
+                    }
+                }
+                return null;
+            }
+
+            function parseCdTime(cdStr) {
+                if (!cdStr) return null;
+                const trimmed = cdStr.trim();
+                if (trimmed.startsWith('1970') || trimmed.startsWith('9970')) return null;
+                const ts = Date.parse(trimmed);
+                if (isNaN(ts) || ts <= 0) return null;
+                const d = new Date(ts);
+                if (d.getFullYear() > 3000) return null;
+                return ts;
+            }
+
+            // ===== 新格式转换：{ 用户名: { 路线名: { Daytime, Nighttime } } } =====
+            // Daytime/Nighttime 是「上次时间」，需根据类型计算下次可采集时间
+            function convertNewFormat(obj) {
+                const result = [];
+                for (const [userName, routes] of Object.entries(obj)) {
+                    if (typeof routes !== 'object' || routes === null || Array.isArray(routes)) continue;
+                    const dataArray = [];
+
+                    for (const [routeName, times] of Object.entries(routes)) {
+                        if (typeof times !== 'object' || times === null) continue;
+
+                        // 判断是否为垂钓点（三次0点刷新）
+                        const isFishing = routeName.includes('垂钓点');
+
+                        const addEntry = (ts, label) => {
+                            let nextTime;
+                            if (isFishing) {
+                                // 垂钓点：+3 天并设为 0 点
+                                const d = new Date(ts);
+                                d.setDate(d.getDate() + 3);
+                                d.setHours(0, 0, 0, 0);
+                                nextTime = d.getTime();
+                            } else {
+                                // 其他物品：上次时间 + 周期小时
+                                const itemName = extractItemFromFileName(routeName) || '';
+                                const cycleHours = getItemCycle(itemName);
+                                nextTime = ts + cycleHours * 3600 * 1000;
+                            }
+                            dataArray.push({
+                                fileName: routeName + '-' + label + '.json',
+                                cdTime: new Date(nextTime).toISOString(),
+                                history: []
+                            });
+                        };
+
+                        if (typeof times.Daytime === 'number') addEntry(times.Daytime, '白天');
+                        if (typeof times.Nighttime === 'number') addEntry(times.Nighttime, '夜晚');
+                    }
+
+                    if (dataArray.length > 0) {
+                        result.push({ userName, data: dataArray });
+                    }
+                }
+                return result;
+            }
+
+
+            // ===== 新格式转换：{ profile名: { 文件名: { last_run_time } } } =====
+            // last_run_time 是上次挖矿时间，需计算下次刷新时间
+            function convertPersistentFormat(obj) {
+                const result = [];
+                for (const [userName, files] of Object.entries(obj)) {
+                    if (typeof files !== 'object' || files === null || Array.isArray(files)) continue;
+                    const dataArray = [];
+
+                    for (const [fileName, info] of Object.entries(files)) {
+                        if (typeof info !== 'object' || info === null) continue;
+                        if (typeof info.last_run_time !== 'number') continue;
+
+                        // 从文件名提取物品，决定刷新类型
+                        const itemName = extractItemFromFileName(fileName);
+                        const cycleHours = getItemCycle(itemName);
+
+                        let nextTime;
+                        const d = new Date(info.last_run_time);
+
+                        if (cycleHours === 72) {
+                            // 3天0点刷新（紫晶块、水晶块、萃凝晶等）
+                            d.setDate(d.getDate() + 3);
+                            d.setHours(0, 0, 0, 0);
+                            nextTime = d.getTime();
+                        } else if (cycleHours === 48) {
+                            // 2天0点刷新（白铁块、电气水晶、星银矿石）
+                            d.setDate(d.getDate() + 2);
+                            d.setHours(0, 0, 0, 0);
+                            nextTime = d.getTime();
+                        } else if (cycleHours === 24) {
+                            // 每天0点刷新
+                            d.setDate(d.getDate() + 1);
+                            d.setHours(0, 0, 0, 0);
+                            nextTime = d.getTime();
+                        } else {
+                            // 其他：直接加上周期小时
+                            nextTime = info.last_run_time + cycleHours * 3600 * 1000;
+                        }
+
+                        dataArray.push({
+                            fileName: fileName,
+                            cdTime: new Date(nextTime).toISOString(),
+                            history: []
+                        });
+                    }
+
+                    if (dataArray.length > 0) {
+                        result.push({ userName, data: dataArray });
+                    }
+                }
+                return result;
+            }
+            // ===== 自动检测 JSON 格式 =====
+            function detectJsonFormat(obj) {
+                if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+                const firstKey = Object.keys(obj)[0];
+                if (!firstKey) return null;
+                const firstVal = obj[firstKey];
+                if (typeof firstVal !== 'object' || firstVal === null || Array.isArray(firstVal)) return null;
+                const secondKey = Object.keys(firstVal)[0];
+                if (!secondKey) return null;
+                const secondVal = firstVal[secondKey];
+                if (typeof secondVal !== 'object' || secondVal === null) return null;
+
+                if ('last_run_time' in secondVal) return 'persistent';
+                if ('Daytime' in secondVal || 'Nighttime' in secondVal) return 'fishing';
+                return null;
+            }
+
+            function extractValidEntries(dataArray) {
+                const now = Date.now();
+                const entries = [];
+                for (const item of dataArray) {
+                    const ts = parseCdTime(item.cdTime);
+                    if (ts === null || ts <= now) continue;
+                    let itemName = extractItemFromFileName(item.fileName);
+                    if (!itemName) itemName = '不明采集物';
+                    entries.push({ fileName: item.fileName, cdTime: ts, itemName });
+                }
+                return entries;
+            }
+
+            function groupByItem(entries) {
+                const map = new Map();
+                for (const entry of entries) {
+                    const key = entry.itemName;
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key).push(entry);
+                }
+                const groupList = [];
+                for (const [name, items] of map) {
+                    items.sort((a, b) => a.cdTime - b.cdTime);
+                    const maxCd = items[items.length - 1].cdTime;
+                    groupList.push({ name, entries: items, maxCdTime: maxCd });
+                }
+                groupList.sort((a, b) => b.maxCdTime - a.maxCdTime);
+                return groupList;
+            }
+
+            // ===== 渲染 =====
+            function render() {
+                let totalRoutes = 0;
+                let html = '';
+
+                if (isMultiUser) {
+                    if (!userData || userData.length === 0) {
+                        container.innerHTML = `<div class="empty-state">暂无冷却中的路线</div>`;
+                        routeCountBadge.textContent = '0 条路线冷却中';
+                        return;
+                    }
+                    const activeUsers = userData.filter(u => {
+                        const entries = extractValidEntries(u.data);
+                        return entries.length > 0;
+                    });
+                    if (activeUsers.length === 0) {
+                        container.innerHTML = `<div class="empty-state">🎉 所有路线均已刷新！</div>`;
+                        routeCountBadge.textContent = '0 条路线冷却中';
+                        return;
+                    }
+                    for (const user of activeUsers) {
+                        const entries = extractValidEntries(user.data);
+                        if (entries.length === 0) continue;
+                        const groupList = groupByItem(entries);
+                        const isUserExpanded = expandedUsers.has(user.userName);
+                        const userToggleIcon = isUserExpanded ? '▼' : '▶';
+                        html += `
+                            <div class="user-card ${isUserExpanded ? 'expanded' : ''}" data-user="${user.userName}">
+                                <div class="user-header" data-action="toggle-user" data-user="${user.userName}">
+                                    <div class="user-name-area">
+                                        <span class="user-toggle-icon">${userToggleIcon}</span>
+                                        <span class="user-name">${user.userName}</span>
+                                        <span class="user-count">(${entries.length} 条)</span>
+                                    </div>
+                                </div>
+                                <div class="user-body">
+                        `;
+                        for (const group of groupList) {
+                            const isItemExpanded = expandedItemsMap.get(user.userName)?.has(group.name) || false;
+                            const itemToggleIcon = isItemExpanded ? '▼' : '▶';
+                            const groupCountdown = formatCountdown(group.maxCdTime - Date.now());
+                            const groupNextTime = formatDate(group.maxCdTime);
+                            html += `
+                                <div class="group-card ${isItemExpanded ? 'expanded' : ''}" data-user="${user.userName}" data-group="${group.name}">
+                                    <div class="group-header" data-action="toggle-group" data-user="${user.userName}" data-group="${group.name}">
+                                        <div class="group-name-area">
+                                            <span class="group-toggle-icon">${itemToggleIcon}</span>
+                                            <span class="group-name">${group.name}</span>
+                                            <span class="group-count">(${group.entries.length} 条)</span>
+                                        </div>
+                                        <div class="group-status-area">
+                                            <span class="group-countdown">剩余 ${groupCountdown}</span>
+                                            <span class="group-next-time">${groupNextTime}</span>
+                                        </div>
+                                    </div>
+                                    <div class="group-body">
+                            `;
+                            const now = Date.now();
+                            for (const entry of group.entries) {
+                                const remainingMs = entry.cdTime - now;
+                                const cycleHours = getItemCycle(group.name);
+                                const cycleMs = cycleHours * 3600 * 1000;
+                                let progress = remainingMs / cycleMs;
+                                if (progress < 0) progress = 0;
+                                if (progress > 1) progress = 1;
+                                const percent = progress * 100;
+                                const countdownStr = formatCountdown(remainingMs);
+                                const timeStr = formatDate(entry.cdTime);
+                                html += `
+                                    <div class="route-item">
+                                        <span class="route-name">${entry.fileName.replace(/\.json$/, '')}</span>
+                                        <div class="route-progress-wrap">
+                                            <div class="route-progress-track">
+                                                <div class="route-progress-fill" style="width: ${percent}%;"></div>
+                                            </div>
+                                            <span class="route-countdown">${countdownStr}</span>
+                                        </div>
+                                        <span class="route-time">${timeStr}</span>
+                                    </div>
+                                `;
+                            }
+                            html += `
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                        totalRoutes += entries.length;
+                    }
+                } else {
+                    if (!singleData || singleData.length === 0) {
+                        container.innerHTML = `<div class="empty-state">暂无冷却中的路线</div>`;
+                        routeCountBadge.textContent = '0 条路线冷却中';
+                        return;
+                    }
+                    const entries = extractValidEntries(singleData);
+                    if (entries.length === 0) {
+                        container.innerHTML = `<div class="empty-state">🎉 所有路线均已刷新！</div>`;
+                        routeCountBadge.textContent = '0 条路线冷却中';
+                        return;
+                    }
+                    const groupList = groupByItem(entries);
+                    totalRoutes = entries.length;
+                    for (const group of groupList) {
+                        const isItemExpanded = expandedItemsMap.get('single')?.has(group.name) || false;
+                        const itemToggleIcon = isItemExpanded ? '▼' : '▶';
+                        const groupCountdown = formatCountdown(group.maxCdTime - Date.now());
+                        const groupNextTime = formatDate(group.maxCdTime);
+                        html += `
+                            <div class="group-card ${isItemExpanded ? 'expanded' : ''}" data-group="${group.name}">
+                                <div class="group-header" data-action="toggle-single-group" data-group="${group.name}">
+                                    <div class="group-name-area">
+                                        <span class="group-toggle-icon">${itemToggleIcon}</span>
+                                        <span class="group-name">${group.name}</span>
+                                        <span class="group-count">(${group.entries.length} 条)</span>
+                                    </div>
+                                    <div class="group-status-area">
+                                        <span class="group-countdown">剩余 ${groupCountdown}</span>
+                                        <span class="group-next-time">${groupNextTime}</span>
+                                    </div>
+                                </div>
+                                <div class="group-body">
+                        `;
+                        const now = Date.now();
+                        for (const entry of group.entries) {
+                            const remainingMs = entry.cdTime - now;
+                            const cycleHours = getItemCycle(group.name);
+                            const cycleMs = cycleHours * 3600 * 1000;
+                            let progress = remainingMs / cycleMs;
+                            if (progress < 0) progress = 0;
+                            if (progress > 1) progress = 1;
+                            const percent = progress * 100;
+                            const countdownStr = formatCountdown(remainingMs);
+                            const timeStr = formatDate(entry.cdTime);
+                            html += `
+                                <div class="route-item">
+                                    <span class="route-name">${entry.fileName.replace(/\.json$/, '')}</span>
+                                    <div class="route-progress-wrap">
+                                        <div class="route-progress-track">
+                                            <div class="route-progress-fill" style="width: ${percent}%;"></div>
+                                        </div>
+                                        <span class="route-countdown">${countdownStr}</span>
+                                    </div>
+                                    <span class="route-time">${timeStr}</span>
+                                </div>
+                            `;
+                        }
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                container.innerHTML = html;
+                routeCountBadge.textContent = `${totalRoutes} 条路线冷却中`;
+
+                // 绑定事件
+                if (isMultiUser) {
+                    document.querySelectorAll('[data-action="toggle-user"]').forEach(el => {
+                        el.removeEventListener('click', handleUserToggle);
+                        el.addEventListener('click', handleUserToggle);
+                    });
+                    document.querySelectorAll('[data-action="toggle-group"]').forEach(el => {
+                        el.removeEventListener('click', handleGroupToggle);
+                        el.addEventListener('click', handleGroupToggle);
+                    });
+                } else {
+                    document.querySelectorAll('[data-action="toggle-single-group"]').forEach(el => {
+                        el.removeEventListener('click', handleSingleGroupToggle);
+                        el.addEventListener('click', handleSingleGroupToggle);
+                    });
+                }
+            }
+
+            function handleUserToggle(e) {
+                const header = e.currentTarget;
+                const userName = header.dataset.user;
+                if (!userName) return;
+                if (expandedUsers.has(userName)) expandedUsers.delete(userName);
+                else expandedUsers.add(userName);
+                render();
+            }
+
+            function handleGroupToggle(e) {
+                const header = e.currentTarget;
+                const userName = header.dataset.user;
+                const groupName = header.dataset.group;
+                if (!userName || !groupName) return;
+                if (!expandedItemsMap.has(userName)) expandedItemsMap.set(userName, new Set());
+                const set = expandedItemsMap.get(userName);
+                if (set.has(groupName)) set.delete(groupName);
+                else set.add(groupName);
+                render();
+            }
+
+            function handleSingleGroupToggle(e) {
+                const header = e.currentTarget;
+                const groupName = header.dataset.group;
+                if (!groupName) return;
+                if (!expandedItemsMap.has('single')) expandedItemsMap.set('single', new Set());
+                const set = expandedItemsMap.get('single');
+                if (set.has(groupName)) set.delete(groupName);
+                else set.add(groupName);
+                render();
+            }
+
+            // ===== 加载数据 =====
+            function loadMultiUser(userDataArray) {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                isMultiUser = true;
+                userData = userDataArray;
+                singleData = null;
+                expandedUsers.clear();
+                expandedItemsMap.clear();
+                if (userData.length > 0) expandedUsers.add(userData[0].userName);
+                render();
+                timerInterval = setInterval(render, 60000);
+                dropzone.classList.add('hidden');
+                app.classList.add('visible');
+                loadingOverlay.classList.remove('show');
+            }
+
+            function loadSingleFile(dataArray) {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                isMultiUser = false;
+                singleData = dataArray;
+                userData = [];
+                expandedUsers.clear();
+                expandedItemsMap.clear();
+                render();
+                timerInterval = setInterval(render, 60000);
+                dropzone.classList.add('hidden');
+                app.classList.add('visible');
+                loadingOverlay.classList.remove('show');
+            }
+
+            // ===== 处理单文件 =====
+            function handleSingleFile(file) {
+                const reader = new FileReader();
+                reader.onload = function (ev) {
+                    try {
+                        // 去掉 UTF-8 BOM
+                        let text = ev.target.result;
+                        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+                        const parsed = JSON.parse(text);
+
+                        // 舊格式：陣列
+                        if (Array.isArray(parsed)) {
+                            if (parsed.length === 0) {
+                                alert('无效的数据格式：需要非空数组');
+                                return;
+                            }
+                            loadSingleFile(parsed);
+                            return;
+                        }
+
+                        // 新格式：物件
+                        if (typeof parsed === 'object' && parsed !== null) {
+                            const format = detectJsonFormat(parsed);
+                            let converted;
+                            if (format === 'persistent') {
+                                converted = convertPersistentFormat(parsed);
+                            } else if (format === 'fishing') {
+                                converted = convertNewFormat(parsed);
+                            } else {
+                                alert('無法識別的數據格式');
+                                return;
+                            }
+                            if (converted.length === 0) {
+                                alert('無法識別的數據格式');
+                                return;
+                            }
+                            if (converted.length === 1) {
+                                loadSingleFile(converted[0].data);
+                            } else {
+                                loadMultiUser(converted);
+                            }
+                            return;
+                        }
+
+                        alert('无效的数据格式');
+                    } catch (err) {
+                        alert('解析 JSON 失败，请检查文件内容。\n' + err.message);
+                    }
+                };
+                reader.onerror = function () { alert('读取文件失败'); };
+                reader.readAsText(file);
+            }
+
+            // ===== 处理文件夹 =====
+            function handleFolderFiles(fileList) {
+                loadingOverlay.classList.add('show');
+                const userMap = new Map();
+                const promises = [];
+
+                for (let i = 0; i < fileList.length; i++) {
+                    const file = fileList[i];
+                    const relativePath = file.webkitRelativePath || file.name;
+                    const pathParts = relativePath.split('/');
+                    if (pathParts.length < 2) continue;
+                    const dirName = pathParts[pathParts.length - 2];
+                    if (file.name !== 'record.json') continue;
+
+                    promises.push(new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function (ev) {
+                            try {
+                                // 去掉 UTF-8 BOM
+                                let txt = ev.target.result;
+                                if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
+                                const data = JSON.parse(txt);
+                                if (Array.isArray(data) && data.length > 0) {
+                                    if (!userMap.has(dirName)) userMap.set(dirName, []);
+                                    userMap.get(dirName).push(data);
+                                }
+                                resolve();
+                            } catch (e) {
+                                console.warn('跳过无效 JSON:', file.name, e);
+                                resolve();
+                            }
+                        };
+                        reader.onerror = function () { resolve(); };
+                        reader.readAsText(file);
+                    }));
+                }
+
+                Promise.all(promises).then(() => {
+                    if (userMap.size === 0) {
+                        alert('未找到任何有效的 record.json 文件');
+                        loadingOverlay.classList.remove('show');
+                        return;
+                    }
+                    const userDataArray = [];
+                    for (const [userName, dataArray] of userMap) {
+                        let merged = [];
+                        for (const d of dataArray) {
+                            if (Array.isArray(d)) merged = merged.concat(d);
+                        }
+                        if (merged.length > 0) {
+                            userDataArray.push({ userName, data: merged });
+                        }
+                    }
+                    if (userDataArray.length === 0) {
+                        alert('未找到有效数据');
+                    } else {
+                        loadMultiUser(userDataArray);
+                    }
+                    loadingOverlay.classList.remove('show');
+                }).catch(err => {
+                    alert('处理文件夹失败：' + err.message);
+                    loadingOverlay.classList.remove('show');
+                });
+            }
+
+            // ===== 触发上传 =====
+            function triggerFolderUpload() { folderInput.click(); }
+            function triggerFileUpload() { fileInput.click(); }
+
+            // ===== 拖拽处理 =====
+            function handleGlobalDrop(e) {
+                e.preventDefault();
+                const files = e.dataTransfer.files;
+                if (!files || files.length === 0) {
+                    alert('没有检测到文件，请重试。');
+                    return;
+                }
+                if (files.length === 1 && files[0].name.endsWith('.json')) {
+                    handleSingleFile(files[0]);
+                    return;
+                }
+                alert('请拖拽单个 .json 文件，或使用 F3 选择包含 record.json 的文件夹。');
+            }
+
+            // ===== 快捷键面板 =====
+            function toggleShortcutPanel(show) {
+                if (show === undefined) {
+                    const isVisible = shortcutPanel.classList.contains('visible');
+                    shortcutPanel.classList.toggle('visible', !isVisible);
+                    panelOverlay.classList.toggle('visible', !isVisible);
+                } else {
+                    shortcutPanel.classList.toggle('visible', show);
+                    panelOverlay.classList.toggle('visible', show);
+                }
+            }
+
+            panelOverlay.addEventListener('click', () => toggleShortcutPanel(false));
+
+            // ===== 主题切换 =====
+            function applyTheme(isDark) {
+                const body = document.body;
+                if (isDark) body.classList.add('dark-mode');
+                else body.classList.remove('dark-mode');
+                themeIndicator.textContent = isDark ? '🌙 深色模式' : '☀️ 浅色模式';
+                themeIndicator.classList.add('show');
+                clearTimeout(themeIndicator._hideTimer);
+                themeIndicator._hideTimer = setTimeout(() => {
+                    themeIndicator.classList.remove('show');
+                }, 1200);
+            }
+
+            function toggleTheme() {
+                const isDark = document.body.classList.contains('dark-mode');
+                applyTheme(!isDark);
+            }
+
+            function autoThemeByTime() {
+                const now = new Date();
+                const h = now.getHours();
+                const m = now.getMinutes();
+                const isDark = (h < 6) || (h === 6 && m <= 30);
+                if (isDark) document.body.classList.add('dark-mode');
+                else document.body.classList.remove('dark-mode');
+            }
+
+            // ===== 显示启动提示 5秒 =====
+            function showStartHint() {
+                hintIndicator.classList.add('show');
+                if (hintTimer) clearTimeout(hintTimer);
+                hintTimer = setTimeout(() => {
+                    hintIndicator.classList.remove('show');
+                }, 5000);
+            }
+
+            // ===== 初始化 =====
+            function init() {
+                autoThemeByTime();
+                showStartHint();
+
+                document.addEventListener('keydown', function (e) {
+                    // 防止浏览器默认行为
+                    if (e.key === 'F2' || e.keyCode === 113 || e.key === 'F3' || e.keyCode === 114) {
+                        e.preventDefault();
+                    }
+
+                    // F1 → 打开超链接
+                    if (e.keyCode === 112) {
+                        e.preventDefault();
+                        window.open(F1_LINK);
+                        return;
+                    }
+
+                    // 0 或 数字键盘0 → 切换面板
+                    if (e.keyCode === 48 || e.keyCode === 96) {
+                        e.preventDefault();
+                        toggleShortcutPanel();
+                        return;
+                    }
+
+                    // ~ 切换主题
+                    if (e.key === '~' || e.key === '`' || e.code === 'Backquote') {
+                        e.preventDefault();
+                        toggleTheme();
+                    }
+
+                    // Alt + F 全屏
+                    if (e.keyCode === 70 && e.altKey) {
+                        e.preventDefault();
+                        changeFullScreen();
+                        return;
+                    }
+                    // . 键开新窗口
+                    if (e.keyCode === 110 || e.keyCode === 190) {
+                        e.preventDefault();
+                        window.open('index.html');
+                        return;
+                    }
+
+                    // [ 切换可编辑
+                    if (e.key === '[' || e.keyCode === 219) {
+                        e.preventDefault();
+                        const body = document.body;
+                        const isEditable = body.getAttribute('contenteditable') === 'true';
+                        body.setAttribute('contenteditable', !isEditable);
+                        alert(isEditable ? '关闭自由编辑网页！' : '启用自由编辑网页！');
+                    }
+                    // F2：单文件
+                    if (e.key === 'F2' || e.keyCode === 113) {
+                        triggerFileUpload();
+                    }
+                    // F3：文件夹
+                    if (e.key === 'F3' || e.keyCode === 114) {
+                        triggerFolderUpload();
+                    }
+                });
+
+                const f1Link = document.getElementById('f1Link');
+                if (f1Link) {
+                    f1Link.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        window.open(F1_LINK, '_blank');
+                    });
+                }
+
+                document.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    if (!dropzone.classList.contains('hidden')) dropzone.classList.add('dragover');
+                });
+                document.addEventListener('dragleave', function (e) {
+                    e.preventDefault();
+                    if (!dropzone.classList.contains('hidden')) dropzone.classList.remove('dragover');
+                });
+                document.addEventListener('drop', handleGlobalDrop);
+
+                // dropzone.addEventListener('click', triggerFolderUpload);
+                // reuploadBtn.addEventListener('click', triggerFolderUpload);
+
+                folderInput.addEventListener('change', function (e) {
+                    if (this.files && this.files.length > 0) {
+                        handleFolderFiles(this.files);
+                    }
+                    this.value = '';
+                });
+
+                fileInput.addEventListener('change', function (e) {
+                    if (this.files && this.files.length > 0) {
+                        handleSingleFile(this.files[0]);
+                    }
+                    this.value = '';
+                });
+
+                app.classList.remove('visible');
+                dropzone.classList.remove('hidden');
+                container.innerHTML = '';
+                routeCountBadge.textContent = '0 条路线冷却中';
+
+                // 折叠其他說明
+                const otherToggle = document.getElementById('otherToggle');
+                const otherBody = document.querySelector('.other-body');
+                if (otherToggle && otherBody) {
+                    otherToggle.addEventListener('click', function () {
+                        this.classList.toggle('collapsed');
+                        otherBody.classList.toggle('collapsed');
+                    });
+                    // 默认折叠?
+                    // otherToggle.classList.add('collapsed');
+                    // otherBody.classList.add('collapsed');
+                }
+            }
+
+            // ===== 全屏切换 =====
+            function changeFullScreen() {
+                if (!document.fullscreenElement) {
+                    const element = document.documentElement;
+                    if (element.requestFullscreen) {
+                        element.requestFullscreen();
+                    } else if (element.mozRequestFullScreen) {
+                        element.mozRequestFullScreen();
+                    } else if (element.webkitRequestFullscreen) {
+                        element.webkitRequestFullscreen();
+                    } else if (element.msRequestFullscreen) {
+                        element.msRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+            }
+
+            init();
+        })();
+    </script>
+</body>
+
+</html>
