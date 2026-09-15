@@ -28,19 +28,19 @@
 
 ## 📂 支持的 JSON 格式
 
-| 来源工具 | 檔案路徑 |
+| 来源工具 | 文件路径 |
 |---------|---------|
-| **采集cd管理**（4.0.0 前） | `JsScript\采集cd管理-me\record\[帳號名]\record.json` |
-| **AutoHoeingOneDragon** 锄地一条龙 | `JsScript\AutoHoeingOneDragon\records\[帳號名].json` |
+| **采集cd管理**（4.0.0 前） | `JsScript\采集cd管理-me\record\[账号名]\record.json` |
+| **AutoHoeingOneDragon** 锄地一条龙 | `JsScript\AutoHoeingOneDragon\records\[账号名].json` |
 | **AbundantOre** 矿产资源批发 | `JsScript\AbundantOre-me\local\persistent_data.json` |
 | **AutoFishingTeyvat** 提瓦特自动钓鱼 | `JsScript\AutoFishingTeyvat-\assets\archive.json` |
 ---
 
-## ⌨️ 快捷键
+## ⌨️ 快捷键说明
 
 | 按键 | 功能 |
 |------|------|
-| `F1` | 開啟說明連結（GitHub） |
+| `F1` | 开启说明链接（GitHub） |
 | `0` | 显示 / 隐藏快捷键面板 |
 | `~` | 切换深色 / 浅色模式 |
 | `Alt + F` | 切换全屏 |
@@ -59,12 +59,12 @@
 
 ---
 
-## 🚫 不想顯示某條路線
+## 🚫 不想显示某条路线
 
-請依照**原檔案的時間格式**，把該路線的時間值改成對應的「跳過值」：
+请依照**原文件的时间格式**，把该路线的时间值改成对应的「跳过值」：
 
-### 若原檔案是 ISO 字串格式（UTC，結尾為 Z）
-例如 `archive.json` 裡是：
+### 若原文件是 ISO 字符串格式（UTC，结尾为 Z）
+例如 `archive.json` 里是：
 
 ```json
 "cdTime": "2026-09-28T20:00:00.000Z"
@@ -76,7 +76,7 @@
 "cdTime": "9970-01-01T00:00:00.000Z"
 ```
 
-### 若原檔案是 ISO 字串格式
+### 若原文件是 ISO 字符串格式
 
 ```json
 "cdTime": "2026-09-28T00:00:00.000+08:00"
@@ -88,8 +88,8 @@
 "cdTime": "9970-01-01T08:00:00.000+08:00"
 ```
 
-### 若原檔案是毫秒時間戳格式
-例如 `persistent_data.json` 裡是：
+### 若原文件是毫秒时间戳格式
+例如 `persistent_data.json` 里是：
 
 ```json
 "last_run_time": 1790524800000
@@ -102,11 +102,11 @@
 ```
 
 
-## ⚠️ 注意事項
+## ⚠️ 注意事项
 
-- 僅顯示 **cdTime 大於當前時間** 的路線
-- 頁面每 **60 秒** 自動刷新一次倒計時
-- 所有數據僅保存在內存中，刷新頁面後需重新拖入
+- 仅显示 **cdTime 大于当前时间** 的路线
+- 页面每 **60 秒** 自动刷新一次倒计时
+- 所有数据仅保存在内存中，刷新页面后需重新拖入
 
 ---
 
