@@ -1,4 +1,4 @@
-<!-- 20260916 -->
+<!-- 20260917 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1032,7 +1032,8 @@
 
                         // 从文件名提取物品，决定刷新类型
                         const itemName = extractItemFromFileName(fileName);
-                        const cycleHours = getItemCycle(itemName);
+                        // ★ 没匹配到 → 72 小时
+                        const cycleHours = itemName ? getItemCycle(itemName) : 72;
 
                         let nextTime;
                         const d = new Date(info.last_run_time);
@@ -1060,7 +1061,8 @@
                         dataArray.push({
                             fileName: fileName,
                             cdTime: new Date(nextTime).toISOString(),
-                            history: []
+                            history: [],
+                            __persistentUnknown: !itemName  // ★ 标记：persistent 未匹配
                         });
                     }
 
@@ -1070,6 +1072,7 @@
                 }
                 return result;
             }
+
             // ===== 自动检测 JSON 格式 =====
             function detectJsonFormat(obj) {
                 if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
@@ -1094,8 +1097,12 @@
                     const ts = parseCdTime(item.cdTime);
                     if (ts === null || ts <= now) continue;
                     let itemName = extractItemFromFileName(item.fileName);
-                    if (!itemName) itemName = '不明采集物';
-                    entries.push({ fileName: item.fileName, cdTime: ts, itemName });
+                    let cycleOverride = null;   // ★ 周期覆盖
+                    if (!itemName) {
+                        itemName = '未标明';
+                        if (item.__persistentUnknown) cycleOverride = 72;  // ★ persistent 未匹配 → 72h
+                    }
+                    entries.push({ fileName: item.fileName, cdTime: ts, itemName, cycleOverride });
                 }
                 return entries;
             }
@@ -1177,7 +1184,7 @@
                             const now = Date.now();
                             for (const entry of group.entries) {
                                 const remainingMs = entry.cdTime - now;
-                                const cycleHours = getItemCycle(group.name);
+                                const cycleHours = entry.cycleOverride || getItemCycle(group.name);
                                 const cycleMs = cycleHours * 3600 * 1000;
                                 let progress = remainingMs / cycleMs;
                                 if (progress < 0) progress = 0;
