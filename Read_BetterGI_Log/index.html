@@ -1,4 +1,4 @@
-<!--20260915-->
+<!--20260919-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1304,7 +1304,14 @@
         let timeFilterEnd = null;     // 筛选结束时间
 
         // 特殊事件关键字（用于 J 键隐藏零统计时保留）
-        const SPECIAL_EVENT_KEYWORDS = ['自动吃药', '使用复活料理', '使用回血料理', '终点坐标异常，不记录', "资源缺失，请重新安装BGI"];
+        const SPECIAL_EVENT_KEYWORDS = [
+            '自动吃药',
+            '使用复活料理',
+            '使用回血料理',
+            '终点坐标异常，不记录',
+            "资源缺失，请重新安装BGI",
+            "进入钓鱼模式失败"
+        ];
 
         // 黑名單关键字
         const BLACKLIST_KEYWORDS = [
