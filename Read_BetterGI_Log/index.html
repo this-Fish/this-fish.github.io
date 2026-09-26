@@ -1,4 +1,4 @@
-<!--20260923-->
+<!--20260927-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -4169,7 +4169,7 @@
 
                             // 995. 执行超时，放弃此次追踪
                             if (line.includes("执行超时，放弃此次追踪")) {
-                                const message = '路径点执行超时，放弃整条路径';
+                                const message = '路径点执行超时';
                                 const type = 'abnormal-alert';
                                 if (currentTask.specialAlerts.has(message)) {
                                     const existing = currentTask.specialAlerts.get(message);
