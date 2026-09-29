@@ -1,4 +1,4 @@
-<!--20260927-->
+<!--20260929-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -4154,6 +4154,18 @@
                                 }
                             }
 
+                            // 44. 等待领取月卡
+                            if (line.includes('等待领取月卡(剩余')) {
+                                const message = '等待领取月卡';
+                                const type = 'purple-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+
                             // LCB版
                             // 900. 网络恢复中...
                             if (line.includes('网络恢复中...')) {
@@ -6369,8 +6381,61 @@
             if (input == "/2") { input = "拉扯结束" }
             if (input == "/3") { input = "小怪" }
             if (input == "/4") { input = "使用回血料理,使用复活料理" }
-            if (input == "/5") { input = "源生嵌合体 并生嵌合胞 嵌合种" }
+            if (input == "/5") {
+                const foodKeywords = ["战狂", "游医", "教官", "流放者"];
+                const eliteKeywords = ["精英"];
 
+                let foodCount = 0;
+                let eliteCount = 0;
+
+                const pickCells = document.querySelectorAll('.column-picks');
+                pickCells.forEach(cell => {
+                    const row = cell.closest('tr');
+                    if (row && row.style.display === 'none') return;
+                    const container = cell.closest('.group-container');
+                    if (container && container.style.display === 'none') return;
+                    if (row.classList.contains('summary-row')) return;
+
+                    const cellClone = cell.cloneNode(true);
+                    cellClone.querySelectorAll('.abnormal-alert, .auto-potion, .warning, .info').forEach(span => span.remove());
+                    const text = cellClone.textContent.trim();
+                    if (text === '无' || text === '') return;
+
+                    if (picksSortByCount) {
+                        const regex = /([^(]+?)\s*\((\d+)\)/g;
+                        let match;
+                        while ((match = regex.exec(text)) !== null) {
+                            const itemName = match[1].trim();
+                            const count = parseInt(match[2]);
+                            foodKeywords.forEach(k => { if (itemName.includes(k)) foodCount += count; });
+                            eliteKeywords.forEach(k => { if (itemName.includes(k)) eliteCount += count; });
+                        }
+                    } else {
+                        const items = text.split(',').map(item => item.trim());
+                        items.forEach(itemName => {
+                            foodKeywords.forEach(k => { if (itemName.includes(k)) foodCount += 1; });
+                            eliteKeywords.forEach(k => { if (itemName.includes(k)) eliteCount += 1; });
+                        });
+                    }
+                });
+
+                let resultText = `战狂,游医,教官,流放者数量：${foodCount}\n`;
+                resultText += `精英数量：${eliteCount}\n\n`;
+
+                if (eliteCount >= 400) {
+                    // 已达400，预期就是实际值
+                    resultText += `预期数量：${foodCount}`;
+                } else if (eliteCount > 0) {
+                    const prediction = (foodCount / eliteCount * 400).toFixed(2);
+                    resultText += `预期数量：${prediction}`;
+                } else {
+                    resultText += `预期数量：无法计算（精英为0）`;
+                }
+
+                alert(resultText);
+                return;
+            }
+            
             // 支持英文逗号、中文逗号、顿号、空格作为分隔符
             const itemsToCount = input.split(/[，,、\s]+/)
                 .map(item => item.trim())

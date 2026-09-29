@@ -317,6 +317,9 @@ A: 确保文件命名格式是`better-genshin-impact日期.log`。
 A: 横屏模式可获得更好体验。
 
 ## 📋 更新日志
+### 20260929
+ - 增加錯誤&其他訊息
+   - 等待领取月卡
 ### 20260913
  - 修改重试次数觸發羅輯
  - 補充 41.执行脚本时发生异常: "Index was outside the bounds of the array."觸發條件
