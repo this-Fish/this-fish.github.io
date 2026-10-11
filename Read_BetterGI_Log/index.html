@@ -1,4 +1,4 @@
-<!--20261003-->
+<!--20261012-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1311,7 +1311,8 @@
             '终点坐标异常，不记录',
             "资源缺失，请重新安装BGI",
             "进入钓鱼模式失败",
-            '加入黑名单：'
+            '加入黑名单：',
+            '钓鱼任务超时'
         ];
 
         // 黑名單关键字
@@ -4025,7 +4026,7 @@
                             }
 
                             // 35.处于限制时间内
-                            if (line.includes('处于限制时间内')) {
+                            if (line.includes('处于限制时间内') || line.includes('不在允许运行的时间内，退出')) {
                                 const message = '处于限制时间内';
                                 const type = 'purple-alert';
                                 if (currentTask.specialAlerts.has(message)) {
@@ -4159,6 +4160,30 @@
                             // 44. 等待领取月卡
                             if (line.includes('等待领取月卡(剩余')) {
                                 const message = '等待领取月卡';
+                                const type = 'purple-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+
+                            // 45. NNN秒超时已到，结束任务
+                            if (line.match(/\d+秒超时已到，结束任务/)) {
+                                const message = '钓鱼任务超时';
+                                const type = 'pause-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+
+                            // 46. 没有更多任务可运行，退出(礦批發)
+                            if (line.includes('没有更多任务可运行，退出')) {
+                                const message = '没有更多任务可运行，退出';
                                 const type = 'purple-alert';
                                 if (currentTask.specialAlerts.has(message)) {
                                     const existing = currentTask.specialAlerts.get(message);
