@@ -1,4 +1,4 @@
-<!--20261012-->
+<!--20261016-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -1225,6 +1225,7 @@
                 <button class="control-btn" data-key="72">任務篩選</button>
                 <button class="control-btn" data-key="77">统计拾取物</button>
                 <button class="control-btn" data-key="100">时间筛选模式</button>
+                <button class="control-btn" data-key="69">模拟按键</button>
             </div>
         </div>
     </div>
@@ -1321,6 +1322,64 @@
         ];
         let blacklistDetected;
 
+        // 模拟按键映射表
+        const SIM_KEY_MAP = {};
+        // 左侧数字行：l0=48, l1~l9=49~57
+        for (let i = 0; i <= 9; i++) SIM_KEY_MAP['l' + i] = i === 0 ? 48 : 48 + i;
+        // 右侧数字键盘：r0~r9 = 96~105
+        for (let i = 0; i <= 9; i++) SIM_KEY_MAP['r' + i] = 96 + i;
+        // 字母 a-z = 65~90
+        for (let i = 0; i < 26; i++) SIM_KEY_MAP[String.fromCharCode(97 + i)] = 65 + i;
+        // F1~F12 = 112~123
+        for (let i = 1; i <= 12; i++) SIM_KEY_MAP['f' + i] = 111 + i;
+        // 常用符号
+        SIM_KEY_MAP['esc'] = 27;
+        SIM_KEY_MAP['tab'] = 9;
+        SIM_KEY_MAP['space'] = 32;
+        SIM_KEY_MAP['enter'] = 13;
+        SIM_KEY_MAP['~'] = 192;
+        SIM_KEY_MAP['['] = 219;
+        SIM_KEY_MAP[']'] = 221;
+
+        // 模拟按键函数
+        function simulateKey() {
+            const input = prompt("输入要模拟的按键：\n前缀 l=左数字行, r=右数字键盘\nAlt 组合用 alt+ 前缀，例如 alt+l, alt+i\n例如：l0(打开帮助), r1, t, alt+l");
+            if (input === null) return;
+
+            // 去空白 + 转小写，这样 "alt + L"、"ALT+L" 都能吃
+            let key = input.trim().toLowerCase().replace(/\s+/g, '');
+            let alt = false;
+
+            // 检测 alt+ 前缀
+            if (key.startsWith('alt+')) {
+                alt = true;
+                key = key.substring(4);
+            }
+
+            // 检测 alt+ 前缀
+            if (key.startsWith('alt+')) {
+                alt = true;
+                key = key.substring(4);
+            }
+
+            // 纯数字且无 l/r 前缀 → 默认当右侧数字键盘
+            if (/^\d$/.test(key)) {
+                key = 'r' + key;
+            }
+
+            const code = SIM_KEY_MAP[key];
+            if (code === undefined) {
+                alert('无法识别的按键: ' + input);
+                return;
+            }
+
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                keyCode: code,
+                which: code,
+                altKey: alt,
+                bubbles: true
+            }));
+        }
 
         // 自定义确认对话框
         function showCustomConfirm(title, message) {
@@ -5947,6 +6006,17 @@
                 updateButtonState(72); // 筛选模式按钮
 
                 e.preventDefault(); // 阻止默认行为
+            } else if (keyNum.keyCode == 69) { // E 键 - 模拟按键
+                // 输入框、文本域、可编辑区域里不触发
+                const activeElement = document.activeElement;
+                const tagName = activeElement.tagName.toLowerCase();
+                if (tagName === 'input' || tagName === 'textarea' ||
+                    activeElement.isContentEditable ||
+                    document.body.getAttribute('contenteditable') === 'true') {
+                    return;
+                }
+                simulateKey();
+                e.preventDefault();
             } else if (keyNum.keyCode == 72) { // H 鍵 - 任務篩選
                 // 檢查是否有日志數據
                 if (!hasLogData) {
