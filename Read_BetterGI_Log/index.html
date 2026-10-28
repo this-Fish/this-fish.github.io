@@ -1,4 +1,4 @@
-<!--20261016-->
+<!--20261029-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -3225,10 +3225,10 @@
                         // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
                         // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|开始购买NPC: "(.+?)"|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"/);
                         // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|开始购买NPC: "(.+?)"|assets\/(.+?\.json)|当前钓鱼点: (.+)|→ 开始执行JS脚本: "(.+?)"|→ 开始执行键鼠脚本: "(.+?)"/);
-                        match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|→ 开始执行JS脚本: "(.+?)"|→ 开始执行键鼠脚本: "(.+?)"/);
+                        // match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|→ 开始执行JS脚本: "(.+?)"|→ 开始执行键鼠脚本: "(.+?)"/);
+                        match = line.match(/→ 开始执行(?:地图|路径)追踪任务: "(.+?)"|assets\/(.+?\.json)|→ 开始执行JS脚本: "(.+?)"|→ 开始执行键鼠脚本: "(.+?)"|→ 开始执行shell: "(.+?)"/);
                         if (match) {
-                            // const taskName = match[1] || match[2] || match[3] || match[4];
-                            const taskName = match[1] || match[2] || match[3] || match[4];
+                            const taskName = match[1] || match[2] || match[3] || match[4] || match[5];
                             const task = {
                                 name: taskName,
                                 startTime: parseTime(prevLine, fileDate),
@@ -4177,7 +4177,7 @@
                             // 41.执行脚本时发生异常: "Index was outside the bounds of the array."
                             if (line.includes('执行脚本时发生异常: "Index was outside the bounds of the array."') ||
                                 line.includes('执行地图追踪时候发生错误: "Index was outside the bounds of the array."')) {
-                                const message = '资源缺失，请重新安装BGI';
+                                const message = '资源错误，请重新安装BGI';
                                 const type = 'abnormal-alert';
                                 if (currentTask.specialAlerts.has(message)) {
                                     const existing = currentTask.specialAlerts.get(message);
