@@ -1,4 +1,4 @@
-<!--20261029-->
+<!--20261102-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -4867,7 +4867,23 @@
                     const cellClass = hasCoords ? 'coords-cell has-coords' : 'coords-cell';
 
                     // 生成拾取物显示文本
-                    let picksText = formatPicks(task.picks, task.pickSequence, true);
+                    // 如果存在"终点坐标异常，不记录"事件，过滤掉精英和小怪
+                    let displayPicks = task.picks;
+                    let displayPickSequence = task.pickSequence;
+                    if (task.specialAlerts && task.specialAlerts.has('终点坐标异常，不记录')) {
+                        displayPicks = new Map();
+                        for (const [item, count] of task.picks) {
+                            if (!item.includes('精英') && !item.includes('小怪')) {
+                                displayPicks.set(item, count);
+                            }
+                        }
+                        if (task.pickSequence) {
+                            displayPickSequence = task.pickSequence.filter(item =>
+                                !item.includes('精英') && !item.includes('小怪')
+                            );
+                        }
+                    }
+                    let picksText = formatPicks(displayPicks, displayPickSequence, true);
 
                     // 按顺序添加提示文本
                     const alerts = [];
@@ -5177,7 +5193,23 @@
                     const duration = calculateDuration(task.startTime, task.endTime);
 
                     // 生成拾取物显示文本
-                    let picksText = formatPicks(task.picks, task.pickSequence, true);
+                    // 如果存在"终点坐标异常，不记录"事件，过滤掉精英和小怪
+                    let displayPicks = task.picks;
+                    let displayPickSequence = task.pickSequence;
+                    if (task.specialAlerts && task.specialAlerts.has('终点坐标异常，不记录')) {
+                        displayPicks = new Map();
+                        for (const [item, count] of task.picks) {
+                            if (!item.includes('精英') && !item.includes('小怪')) {
+                                displayPicks.set(item, count);
+                            }
+                        }
+                        if (task.pickSequence) {
+                            displayPickSequence = task.pickSequence.filter(item =>
+                                !item.includes('精英') && !item.includes('小怪')
+                            );
+                        }
+                    }
+                    let picksText = formatPicks(displayPicks, displayPickSequence, true);
 
                     // 按顺序添加提示文本
                     const alerts = [];
@@ -6516,7 +6548,7 @@
                     }
                 });
 
-                let resultText = `战狂,游医,教官,流放者数量：${foodCount}\n`;
+                let resultText = `战狂,游医,教官,流放者 数量：${foodCount}\n`;
                 resultText += `精英数量：${eliteCount}\n\n`;
 
                 if (eliteCount >= 400) {
