@@ -1,4 +1,4 @@
-<!--20261102-->
+<!--20261110-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -4251,6 +4251,20 @@
                                     currentTask.specialAlerts.set(message, { type: type, count: 1 });
                                 }
                             }
+
+                            // 47. 没有购买任何商品(自动购买商品)
+                            if (line.includes('商品本次未能购买')) {
+                                const message = '有商品未能购买';
+                                const type = 'abnormal-alert';
+                                if (currentTask.specialAlerts.has(message)) {
+                                    const existing = currentTask.specialAlerts.get(message);
+                                    existing.count++;
+                                } else {
+                                    currentTask.specialAlerts.set(message, { type: type, count: 1 });
+                                }
+                            }
+
+                            
 
                             // LCB版
                             // 900. 网络恢复中...
