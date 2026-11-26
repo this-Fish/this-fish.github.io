@@ -1,4 +1,4 @@
-<!--20261110-->
+<!--20261126-->
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -6579,7 +6579,8 @@
                 alert(resultText);
                 return;
             }
-
+            if (input == "/6") { input = "雪结无明心,雪结镜心,雪结片心" }
+            
             // 支持英文逗号、中文逗号、顿号、空格作为分隔符
             const itemsToCount = input.split(/[，,、\s]+/)
                 .map(item => item.trim())
